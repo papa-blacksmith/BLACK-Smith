@@ -1,16 +1,19 @@
-BLACK Smith Ver0.3.3 修正版
+BLACK Smith Ver0.4 演出強化版
 
-原因
-タイトル画面の .title に display:flex が直接指定されており、
-画面移動後もタイトル画面だけが消えずに残っていました。
+追加内容
+- ゲームUI刷新
+- 鍛冶場背景
+- 炉の炎アニメーション
+- 火花エフェクト
+- CSS製3D風武器
+- レアリティ別フラッシュ演出
+- Web Audio APIによる効果音
+- 音声ON/OFFボタン
+- GitHub Pages対応
 
-修正内容
-- タイトル画面は active の時だけ display:flex
-- ホーム、ガチャ、鍛冶、武器庫の切り替えを正常化
-
-更新手順
+更新方法
 1. index.htmlをBLACK-Smithフォルダへ上書き
-2. GitHub Desktopで Update to Ver0.3.3 Fix と入力
+2. GitHub Desktopで Update to Ver0.4 Effects と入力
 3. Commit to main
 4. Push origin
-5. 1〜3分後に公開ページをCtrl+Shift+R
+5. 1〜3分後にCtrl+Shift+R
