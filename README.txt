@@ -1,13 +1,16 @@
-BLACK Smith Ver0.3.2 修正版
+BLACK Smith Ver0.3.3 修正版
+
+原因
+タイトル画面の .title に display:flex が直接指定されており、
+画面移動後もタイトル画面だけが消えずに残っていました。
 
 修正内容
-- ホーム画面に残っていたインラインdisplay指定を削除
-- ホーム、ガチャ、鍛冶、武器庫の画面切り替えを修正
-- 下部メニューだけ切り替わり、画面が変わらない問題を解消
+- タイトル画面は active の時だけ display:flex
+- ホーム、ガチャ、鍛冶、武器庫の切り替えを正常化
 
 更新手順
 1. index.htmlをBLACK-Smithフォルダへ上書き
-2. GitHub Desktopで Update to Ver0.3.2 Fix と入力
+2. GitHub Desktopで Update to Ver0.3.3 Fix と入力
 3. Commit to main
 4. Push origin
-5. 1〜3分後にCtrl+Shift+R
+5. 1〜3分後に公開ページをCtrl+Shift+R
