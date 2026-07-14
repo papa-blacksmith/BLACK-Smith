@@ -1,20 +1,15 @@
-BLACK Smith Ver0.2 PWA版
+BLACK Smith Ver0.3.1 修正版
 
-このフォルダは、スマホのSafari/Chromeで公開して遊ぶための一式です。
+修正内容
+- 古いService Workerをページ起動時に自動解除
+- Cache Storageを自動削除
+- 鍛冶場へ入るボタンに直接実行する予備処理を追加
+- キャッシュ抑制用metaタグを追加
 
-内容
-- index.html: ゲーム本体
-- manifest.webmanifest: ホーム画面追加用設定
-- sw.js: 公開後のオフライン対応
-- icons/: アプリアイコン
-- preview_title.png / preview_game.png: 画面確認用
-
-公開方法（無料）
-1. このZIPを展開します。
-2. Netlify Dropなどの静的サイト公開サービスへ、フォルダごとアップロードします。
-3. 発行されたURLをiPhoneのSafariで開きます。
-4. Safariの共有ボタン→「ホーム画面に追加」でアプリ風に起動できます。
-
-注意
-- ChatGPTアプリ内のHTMLプレビューではJavaScriptが制限される場合があります。
-- このファイルだけではインターネット上のURLは発行されません。静的サイトへアップロードしてください。
+更新方法
+1. このindex.htmlをBLACK-Smithフォルダへ上書き
+2. GitHub Desktopで「Update to Ver0.3.1 Fix」と入力
+3. Commit to main
+4. Push origin
+5. 1〜3分後に公開URLを開く
+6. 初回だけCtrl+Shift+Rで更新
