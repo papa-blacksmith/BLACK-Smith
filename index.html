@@ -8,7 +8,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>BLACK Smith Ver0.3.1 α</title>
+<title>BLACK Smith Ver0.3.2 α</title>
 <style>
 :root{--bg:#080a10;--panel:#121722;--line:#2b3444;--text:#f4f6f8;--muted:#98a3b4;--gold:#efbd5c;--gold2:#b6742f}
 *{box-sizing:border-box}
@@ -58,7 +58,7 @@ input[type=range]{width:100%;accent-color:#dfa94a}
 <section id="title" class="screen title active">
   <div class="logo"></div>
   <h1>BLACK<br>SMITH<small>FORGE YOUR LEGEND</small></h1>
-  <p class="sub">形に縛られず、武器を鍛え、集め、共有する。<br>GitHub Pages対応 Ver0.3.1 α</p>
+  <p class="sub">形に縛られず、武器を鍛え、集め、共有する。<br>GitHub Pages対応 Ver0.3.2 α</p>
   <button id="enterBtn" class="primary" onclick="window.BS_ENTER && window.BS_ENTER()">鍛冶場へ入る</button>
   <button id="rateBtn" class="secondary" style="margin-top:10px" onclick="window.BS_RATES && window.BS_RATES()">排出率を見る</button>
 </section>
@@ -128,12 +128,19 @@ let state={coins:3000,weapons:[]},selected=0;
 try{const saved=localStorage.getItem("blacksmith_v03");if(saved)state=JSON.parse(saved)}catch(e){}
 const $=id=>document.getElementById(id);
 function save(){try{localStorage.setItem("blacksmith_v03",JSON.stringify(state))}catch(e){} render()}
-function show(page){document.querySelectorAll(".screen").forEach(x=>x.classList.remove("active"));$(page).classList.add("active");document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x.dataset.page===page));if(page==="inventory")renderInventory()}
+function show(page){
+  document.querySelectorAll(".screen").forEach(x=>{
+    x.classList.remove("active");
+    x.style.display="";
+  });
+  const target=$(page);
+  if(target) target.classList.add("active");
+  document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x.dataset.page===page));
+  if(page==="inventory")renderInventory();
+}
 function enter(){
-  const nav=$("nav"), title=$("title"), home=$("home");
-  if(nav){nav.classList.add("show");nav.style.display="grid"}
-  if(title){title.classList.remove("active");title.style.display="none"}
-  if(home){home.classList.add("active");home.style.display="block"}
+  const nav=$("nav");
+  if(nav) nav.classList.add("show");
   show("home");
 }
 window.BS_ENTER=enter;
