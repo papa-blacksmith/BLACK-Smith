@@ -3,261 +3,143 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0b0d12">
+<meta name="theme-color" content="#090b11">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="BLACK Smith">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<title>BLACK Smith Ver0.1</title>
+<title>BLACK Smith Ver0.3 α</title>
 <style>
-:root{
-  --bg:#080a0f;--panel:#11151e;--panel2:#171c27;--line:#2b3342;
-  --text:#f3f5f7;--muted:#98a2b3;--gold:#e6b95c;--red:#d85151;
-  --glow:0 0 24px rgba(230,185,92,.22);
-}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;min-height:100%;background:radial-gradient(circle at 50% -10%,#25202a 0,#0d1017 35%,#06080c 80%);color:var(--text);font-family:Inter,"Hiragino Sans","Yu Gothic",sans-serif}
-button{font:inherit;color:inherit}
-#app{min-height:100dvh;max-width:520px;margin:auto;position:relative;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,.015),transparent)}
-.screen{display:none;min-height:100dvh;padding:18px 16px 94px;animation:fade .28s ease}
-.screen.active{display:block}
+:root{--bg:#080a10;--panel:#121722;--line:#2b3444;--text:#f4f6f8;--muted:#98a3b4;--gold:#efbd5c;--gold2:#b6742f}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#07090e;color:var(--text);font-family:system-ui,-apple-system,"Segoe UI","Yu Gothic",sans-serif}
+button,input{font:inherit}
+button{cursor:pointer}
+#app{min-height:100dvh;max-width:560px;margin:auto;background:radial-gradient(circle at 50% 0,#24202a 0,#10131b 32%,#080a10 78%);position:relative;overflow:hidden}
+.screen{display:none;min-height:100dvh;padding:18px 16px 98px}
+.screen.active{display:block;animation:fade .22s ease}
 @keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
-.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.brand{font-weight:900;letter-spacing:.12em}
-.currency{background:#171b23;border:1px solid #313847;border-radius:999px;padding:7px 11px;font-size:13px}
-.card{background:linear-gradient(145deg,rgba(27,33,45,.96),rgba(15,18,25,.98));border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 14px 40px rgba(0,0,0,.22)}
-.title-screen{display:flex;flex-direction:column;justify-content:center;text-align:center;padding-bottom:40px}
-.logo-mark{width:132px;height:132px;margin:0 auto 22px;border-radius:50%;border:2px solid #655433;background:
-radial-gradient(circle,#ffce70 0 3%,#683b1c 4% 8%,#11131a 9% 38%,#292d38 39% 41%,#0b0d12 42%);
-box-shadow:0 0 65px rgba(230,185,92,.25),inset 0 0 35px #000;position:relative}
-.logo-mark:before,.logo-mark:after{content:"";position:absolute;left:50%;top:50%;background:#c7ccd4;border-radius:4px;transform-origin:center}
-.logo-mark:before{width:92px;height:15px;transform:translate(-50%,-50%) rotate(45deg)}
-.logo-mark:after{width:92px;height:15px;transform:translate(-50%,-50%) rotate(-45deg)}
-h1{font-size:39px;line-height:.95;margin:0;letter-spacing:.08em;font-weight:950}
-h1 span{display:block;color:var(--gold);font-size:14px;letter-spacing:.42em;margin-top:12px}
-.subtitle{color:var(--muted);margin:17px auto 30px;max-width:330px;font-size:14px;line-height:1.7}
-.primary,.secondary,.danger{width:100%;border:0;border-radius:14px;padding:14px 16px;font-weight:800;cursor:pointer}
-.primary{background:linear-gradient(135deg,#efc46b,#a86c2d);color:#161008;box-shadow:var(--glow)}
-.secondary{background:#1b202b;border:1px solid #343c4c}
-.danger{background:#3a1d22;border:1px solid #6e323b}
-.small{padding:10px 12px;font-size:13px}
-.hero{height:250px;display:grid;place-items:center;position:relative;overflow:hidden;margin-bottom:14px}
-.embers{position:absolute;inset:0;background:
-radial-gradient(circle at 20% 75%,#f2b55e 0 2px,transparent 3px),
-radial-gradient(circle at 75% 32%,#f27c43 0 2px,transparent 3px),
-radial-gradient(circle at 60% 82%,#ffd580 0 1px,transparent 2px);
-filter:drop-shadow(0 0 6px #ff8b42);opacity:.75}
-.weapon-art{font-size:108px;filter:drop-shadow(0 12px 12px #000);transform:rotate(-12deg)}
-.section-title{display:flex;align-items:end;justify-content:space-between;margin:21px 3px 10px}
-.section-title h2{font-size:20px;margin:0}
-.section-title span{font-size:12px;color:var(--muted)}
-.gacha-box{text-align:center}
-.gacha-result{min-height:250px;display:grid;place-items:center;padding:18px}
-.rarity{font-weight:900;letter-spacing:.14em;font-size:12px}
-.weapon-name{font-size:25px;font-weight:900;margin-top:5px}
-.meta{font-size:12px;color:var(--muted);margin-top:4px}
-.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-.rate-note{font-size:11px;line-height:1.6;color:var(--muted);margin-top:12px}
-.forge-preview{height:230px;display:grid;place-items:center;font-size:100px;background:radial-gradient(circle,#352317 0,#151922 48%,#0f1219 100%);border-radius:18px;margin-bottom:15px}
-.control{margin:14px 0}
-.control label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;color:#cdd3dc}
-input[type=range]{width:100%;accent-color:#d8a94e}
-.choice-row{display:flex;gap:8px;overflow:auto;padding-bottom:4px}
-.choice{min-width:72px;padding:10px;border-radius:12px;border:1px solid #343c4a;background:#171b24;text-align:center}
-.choice.active{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
-.weapon-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.weapon-card{padding:12px;border-radius:16px;background:#151923;border:1px solid #2a3140;min-height:155px}
-.weapon-card .icon{font-size:55px;text-align:center;margin:4px 0}
-.weapon-card .name{font-weight:800;font-size:13px}
-.weapon-card .info{color:var(--muted);font-size:10px;margin-top:4px}
-.empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:50px 10px}
-.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);z-index:10;width:min(520px,100%);display:grid;grid-template-columns:repeat(4,1fr);padding:9px 10px calc(9px + env(safe-area-inset-bottom));background:rgba(9,11,16,.94);backdrop-filter:blur(18px);border-top:1px solid #262c38}
-.nav button{border:0;background:transparent;color:#788395;padding:7px 2px;font-size:10px}
-.nav button b{display:block;font-size:20px;margin-bottom:2px}
-.nav button.active{color:var(--gold)}
-.toast{position:fixed;left:50%;bottom:92px;transform:translate(-50%,20px);background:#eef1f5;color:#15171b;padding:11px 16px;border-radius:999px;font-weight:700;font-size:12px;opacity:0;pointer-events:none;transition:.25s;z-index:20}
-.toast.show{opacity:1;transform:translate(-50%,0)}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:30;display:none;align-items:end;justify-content:center}
-.modal.show{display:flex}
-.sheet{width:min(520px,100%);max-height:80dvh;overflow:auto;background:#121620;border:1px solid #333b49;border-radius:24px 24px 0 0;padding:20px 16px calc(24px + env(safe-area-inset-bottom))}
-.sheet h3{margin:0 0 12px}
-.code{font-family:ui-monospace,monospace;background:#090b10;border:1px solid #2e3542;padding:12px;border-radius:12px;word-break:break-all;color:#e8c675}
-.legend{display:grid;grid-template-columns:1fr auto;gap:8px;font-size:12px;padding:7px 0;border-bottom:1px solid #262d38}
-.badge{display:inline-block;padding:4px 7px;border:1px solid currentColor;border-radius:999px;font-size:10px}
+.title{display:flex;flex-direction:column;justify-content:center;text-align:center;padding-bottom:40px}
+.logo{width:132px;height:132px;margin:0 auto 22px;border-radius:50%;border:2px solid #705c34;background:radial-gradient(circle,#12151d 0 58%,#05070a 59%);box-shadow:0 0 60px rgba(239,189,92,.18);position:relative}
+.logo:before,.logo:after{content:"";position:absolute;width:82px;height:14px;left:50%;top:50%;background:#d9dee7;border-radius:5px}
+.logo:before{transform:translate(-50%,-50%) rotate(45deg)}.logo:after{transform:translate(-50%,-50%) rotate(-45deg)}
+h1{font-size:42px;line-height:.92;letter-spacing:.08em;margin:0;font-weight:950}
+h1 small{display:block;color:var(--gold);font-size:13px;letter-spacing:.38em;margin-top:15px}
+.sub{color:#9eabc0;font-size:13px;line-height:1.8;margin:18px auto 28px}
+.primary,.secondary{border-radius:14px;padding:15px 16px;font-weight:900;border:0;width:100%}
+.primary{background:linear-gradient(135deg,#f1c667,#b8742e);color:#171009;box-shadow:0 12px 28px rgba(191,121,45,.22)}
+.secondary{background:#1a202c;color:#fff;border:1px solid #364052}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.brand{font-weight:950;letter-spacing:.08em}.coin{padding:7px 11px;border-radius:999px;background:#171c26;border:1px solid #303848;font-size:13px}
+.card{background:linear-gradient(145deg,#171d29,#10141d);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 18px 44px rgba(0,0,0,.25)}
+.hero{height:255px;display:grid;place-items:center;margin-bottom:14px;overflow:hidden;position:relative}
+.hero:after{content:"";position:absolute;inset:auto 0 0;height:55%;background:radial-gradient(ellipse at 50% 100%,rgba(239,189,92,.24),transparent 70%)}
+.heroIcon{font-size:112px;filter:drop-shadow(0 15px 12px #000);z-index:1}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.section{display:flex;justify-content:space-between;align-items:end;margin:20px 3px 10px}.section h2{margin:0;font-size:20px}.section span{font-size:11px;color:var(--muted)}
+.result{min-height:260px;display:grid;place-items:center;text-align:center}.resultIcon{font-size:100px}.rarity{font-size:12px;font-weight:950;letter-spacing:.13em}.weaponName{font-size:25px;font-weight:950;margin-top:5px}.meta{font-size:12px;color:var(--muted);margin-top:5px}
+.preview{height:235px;display:grid;place-items:center;font-size:105px;border-radius:18px;background:radial-gradient(circle,#3b2719 0,#171c26 46%,#0d1118 100%);margin-bottom:14px}
+.control{margin:14px 0}.control label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;color:#d5dbe5}
+input[type=range]{width:100%;accent-color:#dfa94a}
+.choices{display:flex;gap:8px;overflow:auto;padding-bottom:4px}.choice{min-width:75px;border-radius:12px;border:1px solid #343d4d;background:#171c26;color:#fff;padding:9px}.choice.active{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
+.inventory{display:grid;grid-template-columns:1fr 1fr;gap:10px}.weaponCard{background:#151a24;border:1px solid #2b3341;color:#fff;border-radius:16px;padding:12px;text-align:left}.weaponCard .ico{font-size:55px;text-align:center}.weaponCard .nm{font-weight:850;font-size:13px}.weaponCard .sm{font-size:10px;color:var(--muted);margin-top:4px}
+.badge{display:inline-block;padding:3px 7px;border-radius:999px;border:1px solid currentColor;font-size:9px}
+.empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:55px 10px}
+.nav{display:none;position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(560px,100%);grid-template-columns:repeat(4,1fr);padding:8px 8px calc(8px + env(safe-area-inset-bottom));background:rgba(8,10,15,.95);border-top:1px solid #27303d;backdrop-filter:blur(16px);z-index:10}
+.nav.show{display:grid}.nav button{background:transparent;border:0;color:#7f8a9d;padding:7px 2px;font-size:10px}.nav button b{display:block;font-size:20px;margin-bottom:2px}.nav button.active{color:var(--gold)}
+.toast{position:fixed;left:50%;bottom:94px;transform:translate(-50%,20px);opacity:0;background:#f5f6f8;color:#15171b;border-radius:999px;padding:11px 16px;font-size:12px;font-weight:800;transition:.22s;z-index:40}.toast.show{opacity:1;transform:translate(-50%,0)}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:30;align-items:end;justify-content:center}.modal.show{display:flex}.sheet{width:min(560px,100%);max-height:82dvh;overflow:auto;background:#121722;border:1px solid #344052;border-radius:24px 24px 0 0;padding:20px 16px calc(24px + env(safe-area-inset-bottom))}
+.row{display:flex;justify-content:space-between;border-bottom:1px solid #293240;padding:9px 0;font-size:12px}.code{word-break:break-all;font-family:monospace;background:#090c12;border:1px solid #2b3442;border-radius:12px;padding:12px;color:#f1c96d}
+.note{font-size:11px;color:var(--muted);line-height:1.65}
 </style>
 </head>
 <body>
 <div id="app">
-<section id="title" class="screen active title-screen">
-  <div class="logo-mark"></div>
-  <h1>BLACK<br>SMITH<span>FORGE YOUR LEGEND</span></h1>
-  <p class="subtitle">形に縛られず、武器を鍛え、集め、共有する。<br>スマホ試作版 Ver0.1</p>
-  <button class="primary" onclick="enterGame()">鍛冶場へ入る</button>
-  <button class="secondary" style="margin-top:10px" onclick="showRates()">排出率を見る</button>
+<section id="title" class="screen title active">
+  <div class="logo"></div>
+  <h1>BLACK<br>SMITH<small>FORGE YOUR LEGEND</small></h1>
+  <p class="sub">形に縛られず、武器を鍛え、集め、共有する。<br>GitHub Pages対応 Ver0.3 α</p>
+  <button id="enterBtn" class="primary">鍛冶場へ入る</button>
+  <button id="rateBtn" class="secondary" style="margin-top:10px">排出率を見る</button>
 </section>
 
 <section id="home" class="screen">
-  <div class="topbar"><div class="brand">BLACK Smith</div><div class="currency">🔥 <span class="coins">3000</span></div></div>
-  <div class="card hero"><div class="embers"></div><div class="weapon-art" id="heroWeapon">⚔️</div></div>
-  <button class="primary" onclick="go('forge')">新しい武器を鍛える</button>
-  <div class="section-title"><h2>本日の炉</h2><span>Ver0.1</span></div>
-  <div class="card">
-    <div style="font-weight:800">自由造形プロトタイプ</div>
-    <p style="color:var(--muted);font-size:13px;line-height:1.7;margin-bottom:0">持ち手を共通規格として、刀身・ハンマー頭・ネタパーツを組み替えられます。AI補助と武器コードはUIの試作段階です。</p>
-  </div>
+  <div class="top"><div class="brand">BLACK Smith</div><div class="coin">🔥 <span data-coins>3000</span></div></div>
+  <div class="card hero"><div id="heroIcon" class="heroIcon">⚔️</div></div>
+  <button class="primary" data-go="forge">新しい武器を鍛える</button>
+  <div class="section"><h2>鍛冶場ニュース</h2><span>α版</span></div>
+  <div class="card"><b>Ver0.3へ更新</b><p class="note">画面移動、ガチャ、鍛造、武器庫、セーブを1つのHTMLに統合しました。Service Workerを使わないため、更新時に古い画面が残りにくい構成です。</p></div>
 </section>
 
 <section id="gacha" class="screen">
-  <div class="topbar"><div class="brand">召喚炉</div><div class="currency">🔥 <span class="coins">3000</span></div></div>
-  <div class="card gacha-box">
-    <div class="gacha-result" id="gachaResult">
-      <div><div style="font-size:88px">🔥</div><div class="meta">火を入れて武器を生成</div></div>
-    </div>
-    <div class="actions">
-      <button class="secondary" onclick="draw(1)">1回 / 100</button>
-      <button class="primary" onclick="draw(10)">10回 / 900</button>
-    </div>
-    <div class="rate-note">BLACK Smith 0.048%・成長型等級コモン 0.002%。その他はVer0.1用の仮配分です。</div>
+  <div class="top"><div class="brand">召喚炉</div><div class="coin">🔥 <span data-coins>3000</span></div></div>
+  <div class="card">
+    <div id="gachaResult" class="result"><div><div class="resultIcon">🔥</div><div class="meta">炉に火を入れて武器を生成</div></div></div>
+    <div class="grid2"><button class="secondary" data-draw="1">1回 / 100</button><button class="primary" data-draw="10">10回 / 900</button></div>
+    <p class="note">BLACK Smith 0.048%、成長型等級コモン 0.002%。その他はα版の仮配分です。</p>
   </div>
 </section>
 
 <section id="forge" class="screen">
-  <div class="topbar"><div class="brand">鍛冶工房</div><div class="currency">🔥 <span class="coins">3000</span></div></div>
+  <div class="top"><div class="brand">鍛冶工房</div><div class="coin">🔥 <span data-coins>3000</span></div></div>
   <div class="card">
-    <div class="forge-preview" id="forgePreview">⚔️</div>
-    <div class="control">
-      <label><span>武器タイプ</span><span id="typeLabel">刀剣</span></label>
-      <div class="choice-row" id="typeChoices"></div>
-    </div>
-    <div class="control">
-      <label><span>刀身・ヘッドの長さ</span><span id="lengthLabel">60</span></label>
-      <input id="lengthRange" type="range" min="20" max="100" value="60">
-    </div>
-    <div class="control">
-      <label><span>異形度</span><span id="weirdLabel">25</span></label>
-      <input id="weirdRange" type="range" min="0" max="100" value="25">
-    </div>
-    <div class="actions">
-      <button class="secondary" onclick="aiAssist()">AI補助</button>
-      <button class="primary" onclick="forgeWeapon()">鍛造する / 150</button>
-    </div>
+    <div id="forgePreview" class="preview">⚔️</div>
+    <div class="control"><label><span>武器タイプ</span><span id="typeLabel">刀剣</span></label><div id="choices" class="choices"></div></div>
+    <div class="control"><label><span>長さ</span><span id="lengthLabel">60</span></label><input id="lengthRange" type="range" min="20" max="100" value="60"></div>
+    <div class="control"><label><span>異形度</span><span id="weirdLabel">25</span></label><input id="weirdRange" type="range" min="0" max="100" value="25"></div>
+    <div class="grid2"><button id="aiBtn" class="secondary">AI補助</button><button id="forgeBtn" class="primary">鍛造 / 150</button></div>
   </div>
 </section>
 
 <section id="inventory" class="screen">
-  <div class="topbar"><div class="brand">武器庫</div><div class="currency"><span id="count">0</span> / 100</div></div>
-  <div class="weapon-grid" id="weaponGrid"></div>
+  <div class="top"><div class="brand">武器庫</div><div class="coin"><span id="weaponCount">0</span> / 100</div></div>
+  <div id="inventoryGrid" class="inventory"></div>
 </section>
 
-<nav class="nav" id="nav" style="display:none">
-  <button data-page="home" onclick="go('home')"><b>⌂</b>ホーム</button>
-  <button data-page="gacha" onclick="go('gacha')"><b>✦</b>ガチャ</button>
-  <button data-page="forge" onclick="go('forge')"><b>⚒</b>鍛冶</button>
-  <button data-page="inventory" onclick="go('inventory')"><b>▦</b>武器庫</button>
+<nav id="nav" class="nav">
+  <button data-page="home"><b>⌂</b>ホーム</button>
+  <button data-page="gacha"><b>✦</b>ガチャ</button>
+  <button data-page="forge"><b>⚒</b>鍛冶</button>
+  <button data-page="inventory"><b>▦</b>武器庫</button>
 </nav>
-<div id="toast" class="toast"></div>
-<div id="modal" class="modal" onclick="closeModal(event)"><div class="sheet" id="sheet"></div></div>
-</div>
-<script>
-const TYPES=[
- {name:'刀剣',icon:'⚔️'},{name:'ハンマー',icon:'🔨'},{name:'槍',icon:'🔱'},
- {name:'斧',icon:'🪓'},{name:'ネタ武器',icon:'🍗'}
-];
-const RARITIES=[
- {name:'成長型等級コモン',p:0.002,color:'#7fffd4'},
- {name:'BLACK Smith',p:0.048,color:'#f3ca65'},
- {name:'LEGEND',p:0.45,color:'#ff8b5c'},
- {name:'EPIC',p:3.5,color:'#c18cff'},
- {name:'RARE',p:16,color:'#65a9ff'},
- {name:'UNCOMMON',p:30,color:'#75d89b'},
- {name:'COMMON',p:50,color:'#b6bdc8'}
-];
-let state=JSON.parse(localStorage.getItem('blacksmith_v01')||'null')||{coins:3000,weapons:[]};
-let selectedType=0;
-function save(){localStorage.setItem('blacksmith_v01',JSON.stringify(state));renderAll()}
-function enterGame(){document.getElementById('nav').style.display='grid';go('home')}
-function go(id){
- document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
- document.getElementById(id).classList.add('active');
- document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===id));
- if(id==='inventory') renderInventory();
-}
-function rarityRoll(){
- let r=Math.random()*100,acc=0;
- for(const x of RARITIES){acc+=x.p;if(r<acc)return x}
- return RARITIES[RARITIES.length-1];
-}
-function makeWeapon(source,typeIndex=Math.floor(Math.random()*TYPES.length)){
- const r=rarityRoll(),t=TYPES[typeIndex],adj=['黒鉄','灼熱','蒼雷','月影','暴食','歪曲','無銘','機巧'][Math.floor(Math.random()*8)];
- return {id:Date.now()+Math.random(),name:`${adj}の${t.name}`,icon:t.icon,rarity:r.name,color:r.color,source,level:1,code:weaponCode(),length:20+Math.floor(Math.random()*81),weird:Math.floor(Math.random()*101)};
-}
-function weaponCode(){return 'BS-'+Math.random().toString(36).slice(2,6).toUpperCase()+'-'+Math.random().toString(36).slice(2,8).toUpperCase()}
-function draw(n){
- const cost=n===10?900:100;
- if(state.coins<cost)return toast('炉火が足りません');
- state.coins-=cost;
- const got=Array.from({length:n},()=>makeWeapon('ガチャ'));
- state.weapons.unshift(...got);
- const best=got.sort((a,b)=>RARITIES.findIndex(x=>x.name===a.rarity)-RARITIES.findIndex(x=>x.name===b.rarity))[0];
- document.getElementById('gachaResult').innerHTML=`<div><div style="font-size:98px">${best.icon}</div><div class="rarity" style="color:${best.color}">${best.rarity}</div><div class="weapon-name">${best.name}</div><div class="meta">${n}個の武器を獲得</div></div>`;
- save();toast(`${n}個の武器を獲得`);
-}
-function initChoices(){
- const box=document.getElementById('typeChoices');
- box.innerHTML=TYPES.map((t,i)=>`<button class="choice ${i===0?'active':''}" onclick="selectType(${i})"><div style="font-size:25px">${t.icon}</div><small>${t.name}</small></button>`).join('');
-}
-function selectType(i){selectedType=i;document.querySelectorAll('.choice').forEach((x,j)=>x.classList.toggle('active',i===j));updateForge()}
-function updateForge(){
- const t=TYPES[selectedType],l=+lengthRange.value,w=+weirdRange.value;
- typeLabel.textContent=t.name;lengthLabel.textContent=l;weirdLabel.textContent=w;
- forgePreview.textContent=t.icon;
- forgePreview.style.transform=`scale(${.75+l/170}) rotate(${(w-50)/4}deg)`;
- forgePreview.style.filter=`drop-shadow(0 10px ${8+w/8}px rgba(230,185,92,${.15+w/180}))`;
-}
-function aiAssist(){lengthRange.value=20+Math.floor(Math.random()*81);weirdRange.value=Math.floor(Math.random()*101);selectedType=Math.floor(Math.random()*TYPES.length);initChoices();selectType(selectedType);toast('AIが造形案を生成しました')}
-function forgeWeapon(){
- if(state.coins<150)return toast('炉火が足りません');
- state.coins-=150;
- const w=makeWeapon('鍛造',selectedType);w.length=+lengthRange.value;w.weird=+weirdRange.value;
- state.weapons.unshift(w);save();toast(`${w.name}を鍛造しました`);showWeapon(w);
-}
-function renderInventory(){
- const box=document.getElementById('weaponGrid');
- if(!state.weapons.length){box.innerHTML='<div class="empty">まだ武器がありません。<br>ガチャか鍛冶で作ってみよう。</div>';return}
- box.innerHTML=state.weapons.map((w,i)=>`<button class="weapon-card" onclick="showWeapon(state.weapons[${i}])">
- <div class="badge" style="color:${w.color}">${w.rarity}</div><div class="icon">${w.icon}</div><div class="name">${w.name}</div><div class="info">Lv.${w.level}・${w.source}</div></button>`).join('');
-}
-function showWeapon(w){
- sheet.innerHTML=`<h3>${w.name}</h3><div style="font-size:92px;text-align:center">${w.icon}</div>
- <div class="legend"><span>レアリティ</span><b style="color:${w.color}">${w.rarity}</b></div>
- <div class="legend"><span>入手方法</span><b>${w.source}</b></div>
- <div class="legend"><span>造形</span><b>長さ ${w.length} / 異形度 ${w.weird}</b></div>
- <p style="font-size:12px;color:#98a2b3">武器コード</p><div class="code">${w.code}</div>
- <button class="primary" style="margin-top:14px" onclick="copyCode('${w.code}')">コードをコピー</button>`;
- modal.classList.add('show');
-}
-function showRates(){
- sheet.innerHTML='<h3>排出率（Ver0.1）</h3>'+RARITIES.map(r=>`<div class="legend"><span style="color:${r.color}">${r.name}</span><b>${r.p}%</b></div>`).join('')+
- '<p class="rate-note">BLACK Smithと成長型等級コモン以外は仮設定です。合計100%になるよう配分しています。</p>';
- modal.classList.add('show');
-}
-function closeModal(e){if(e.target===modal)modal.classList.remove('show')}
-function copyCode(c){navigator.clipboard?.writeText(c);toast('武器コードをコピーしました')}
-function toast(s){const t=document.getElementById('toast');t.textContent=s;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)}
-function renderAll(){
- document.querySelectorAll('.coins').forEach(x=>x.textContent=state.coins);
- document.getElementById('count').textContent=state.weapons.length;
- document.getElementById('heroWeapon').textContent=state.weapons[0]?.icon||'⚔️';
- renderInventory();
-}
-const lengthRange=document.getElementById('lengthRange'),weirdRange=document.getElementById('weirdRange');
-lengthRange.addEventListener('input',updateForge);weirdRange.addEventListener('input',updateForge);
-initChoices();updateForge();renderAll();
 
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
-}
+<div id="toast" class="toast"></div>
+<div id="modal" class="modal"><div id="sheet" class="sheet"></div></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const TYPES=[{name:"刀剣",icon:"⚔️"},{name:"ハンマー",icon:"🔨"},{name:"槍",icon:"🔱"},{name:"斧",icon:"🪓"},{name:"ネタ武器",icon:"🍗"}];
+const R=[{name:"成長型等級コモン",p:.002,color:"#7fffd4"},{name:"BLACK Smith",p:.048,color:"#f2ca62"},{name:"LEGEND",p:.45,color:"#ff8b5c"},{name:"EPIC",p:3.5,color:"#c28cff"},{name:"RARE",p:16,color:"#67aaff"},{name:"UNCOMMON",p:30,color:"#77d99a"},{name:"COMMON",p:50,color:"#b8c0cc"}];
+let state={coins:3000,weapons:[]},selected=0;
+try{const saved=localStorage.getItem("blacksmith_v03");if(saved)state=JSON.parse(saved)}catch(e){}
+const $=id=>document.getElementById(id);
+function save(){try{localStorage.setItem("blacksmith_v03",JSON.stringify(state))}catch(e){} render()}
+function show(page){document.querySelectorAll(".screen").forEach(x=>x.classList.remove("active"));$(page).classList.add("active");document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x.dataset.page===page));if(page==="inventory")renderInventory()}
+function enter(){ $("nav").classList.add("show"); show("home") }
+function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1600)}
+function roll(){let n=Math.random()*100,a=0;for(const r of R){a+=r.p;if(n<a)return r}return R[R.length-1]}
+function code(){return "BS-"+Math.random().toString(36).slice(2,6).toUpperCase()+"-"+Math.random().toString(36).slice(2,8).toUpperCase()}
+function make(source,typeIndex=Math.floor(Math.random()*TYPES.length)){const r=roll(),t=TYPES[typeIndex],ad=["黒鉄","灼熱","蒼雷","月影","暴食","歪曲","無銘","機巧"][Math.floor(Math.random()*8)];return{id:Date.now()+Math.random(),name:ad+"の"+t.name,icon:t.icon,rarity:r.name,color:r.color,source,level:1,code:code(),length:20+Math.floor(Math.random()*81),weird:Math.floor(Math.random()*101)}}
+function draw(n){const cost=n===10?900:100;if(state.coins<cost)return toast("炉火が足りません");state.coins-=cost;const got=Array.from({length:n},()=>make("ガチャ"));state.weapons.unshift(...got);const best=got.slice().sort((a,b)=>R.findIndex(x=>x.name===a.rarity)-R.findIndex(x=>x.name===b.rarity))[0];$("gachaResult").innerHTML='<div><div class="resultIcon">'+best.icon+'</div><div class="rarity" style="color:'+best.color+'">'+best.rarity+'</div><div class="weaponName">'+best.name+'</div><div class="meta">'+n+'個獲得</div></div>';save();toast(n+"個の武器を獲得")}
+function initChoices(){$("choices").innerHTML=TYPES.map((t,i)=>'<button class="choice '+(i===selected?'active':'')+'" data-type="'+i+'"><div style="font-size:25px">'+t.icon+'</div><small>'+t.name+'</small></button>').join("")}
+function updateForge(){const l=+$("lengthRange").value,w=+$("weirdRange").value,t=TYPES[selected];$("typeLabel").textContent=t.name;$("lengthLabel").textContent=l;$("weirdLabel").textContent=w;$("forgePreview").textContent=t.icon;$("forgePreview").style.transform="scale("+(0.75+l/170)+") rotate("+((w-50)/4)+"deg)"}
+function ai(){selected=Math.floor(Math.random()*TYPES.length);$("lengthRange").value=20+Math.floor(Math.random()*81);$("weirdRange").value=Math.floor(Math.random()*101);initChoices();updateForge();toast("AIが造形案を生成")}
+function forge(){if(state.coins<150)return toast("炉火が足りません");state.coins-=150;const w=make("鍛造",selected);w.length=+$("lengthRange").value;w.weird=+$("weirdRange").value;state.weapons.unshift(w);save();showWeapon(w);toast(w.name+"を鍛造")}
+function showWeapon(w){$("sheet").innerHTML='<h3>'+w.name+'</h3><div style="font-size:90px;text-align:center">'+w.icon+'</div><div class="row"><span>レアリティ</span><b style="color:'+w.color+'">'+w.rarity+'</b></div><div class="row"><span>入手</span><b>'+w.source+'</b></div><div class="row"><span>造形</span><b>長さ '+w.length+' / 異形度 '+w.weird+'</b></div><p class="note">武器コード</p><div class="code">'+w.code+'</div><button class="primary" id="copyBtn" style="margin-top:14px">コードをコピー</button>';$("modal").classList.add("show");$("copyBtn").onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(w.code);toast("コピーしました")}}
+function showRates(){$("sheet").innerHTML="<h3>排出率</h3>"+R.map(r=>'<div class="row"><span style="color:'+r.color+'">'+r.name+'</span><b>'+r.p+'%</b></div>').join("")+'<p class="note">BLACK Smithと成長型等級コモン以外は仮設定です。</p>';$("modal").classList.add("show")}
+function renderInventory(){const box=$("inventoryGrid");if(!state.weapons.length){box.innerHTML='<div class="empty">まだ武器がありません。<br>ガチャまたは鍛冶で作ってみよう。</div>';return}box.innerHTML=state.weapons.map((w,i)=>'<button class="weaponCard" data-index="'+i+'"><span class="badge" style="color:'+w.color+'">'+w.rarity+'</span><div class="ico">'+w.icon+'</div><div class="nm">'+w.name+'</div><div class="sm">Lv.'+w.level+'・'+w.source+'</div></button>').join("")}
+function render(){document.querySelectorAll("[data-coins]").forEach(x=>x.textContent=state.coins);$("weaponCount").textContent=state.weapons.length;$("heroIcon").textContent=state.weapons[0]?state.weapons[0].icon:"⚔️";renderInventory()}
+$("enterBtn").addEventListener("click",enter);
+$("rateBtn").addEventListener("click",showRates);
+document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>show(b.dataset.go)));
+document.querySelectorAll("#nav button").forEach(b=>b.addEventListener("click",()=>show(b.dataset.page)));
+document.querySelectorAll("[data-draw]").forEach(b=>b.addEventListener("click",()=>draw(+b.dataset.draw)));
+$("choices").addEventListener("click",e=>{const b=e.target.closest("[data-type]");if(!b)return;selected=+b.dataset.type;initChoices();updateForge()});
+$("inventoryGrid").addEventListener("click",e=>{const b=e.target.closest("[data-index]");if(b)showWeapon(state.weapons[+b.dataset.index])});
+$("lengthRange").addEventListener("input",updateForge);$("weirdRange").addEventListener("input",updateForge);
+$("aiBtn").addEventListener("click",ai);$("forgeBtn").addEventListener("click",forge);
+$("modal").addEventListener("click",e=>{if(e.target===$("modal"))$("modal").classList.remove("show")});
+initChoices();updateForge();render();
+})();
 </script>
 </body>
 </html>
