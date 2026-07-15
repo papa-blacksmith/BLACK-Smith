@@ -33,3 +33,25 @@ Web版、Three.js版、Unreal Engine 5版で共有する基本形式です。
 - 最大12点
 - x座標順に正規化
 - Pointer EventsでPC・スマホ両対応
+
+
+## Schema v2 — Bézier handles
+
+各制御点はアンカー座標に加え、相対座標の入出力ハンドルを持ちます。
+
+```json
+{
+  "x": 0.30,
+  "y": 0.47,
+  "inX": -0.08,
+  "inY": 0.03,
+  "outX": 0.09,
+  "outY": -0.03,
+  "smooth": true
+}
+```
+
+- `inX`, `inY`: 前の区間から入るハンドル
+- `outX`, `outY`: 次の区間へ出るハンドル
+- `smooth: true`: 反対側のハンドルを同一直線上に保つ
+- `smooth: false`: 左右ハンドルを独立させ、角や折れを作る

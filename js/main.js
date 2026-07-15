@@ -104,42 +104,76 @@ function renderSharedShapeControls(){
     </div>`;
 }
 
+function cubicBezier(p0,p1,p2,p3,t){
+  const u=1-t;
+  return {
+    x:u*u*u*p0.x+3*u*u*t*p1.x+3*u*t*t*p2.x+t*t*t*p3.x,
+    y:u*u*u*p0.y+3*u*u*t*p1.y+3*u*t*t*p2.y+t*t*t*p3.y
+  };
+}
+
+function sampleBezierCenterline(shape){
+  const startX=110, usableX=760, startY=55, usableY=250;
+  const anchors=shape.points.map((p,index)=>({
+    index,
+    x:startX+p.x*usableX,
+    y:startY+p.y*usableY,
+    inX:(p.x+p.inX)*usableX+startX,
+    inY:(p.y+p.inY)*usableY+startY,
+    outX:(p.x+p.outX)*usableX+startX,
+    outY:(p.y+p.outY)*usableY+startY
+  }));
+  const samples=[];
+  for(let i=0;i<anchors.length-1;i++){
+    const a=anchors[i],b=anchors[i+1];
+    const p0={x:a.x,y:a.y},p1={x:a.outX,y:a.outY},p2={x:b.inX,y:b.inY},p3={x:b.x,y:b.y};
+    const steps=18;
+    for(let s=0;s<steps;s++){
+      const t=s/steps;
+      samples.push(cubicBezier(p0,p1,p2,p3,t));
+    }
+  }
+  samples.push({x:anchors.at(-1).x,y:anchors.at(-1).y});
+  return {anchors,samples};
+}
+
 function drawShape(svg,shapeInput){
   if(!svg)return;
   const shape=normalizeShape(shapeInput);
   const type=TYPES[shape.weaponType]||TYPES[0];
-  const startX=110;
-  const usable=760;
-  const centerY=180;
-  const width=26+shape.width*.72;
-  const pointPairs=shape.points.map((p,i)=>{
-    const x=startX+p.x*usable;
-    const y=55+p.y*250;
-    return {x,y,index:i};
-  }).sort((a,b)=>a.x-b.x);
+  const {anchors,samples}=sampleBezierCenterline(shape);
+  const baseWidth=24+shape.width*.72;
+  const top=[],bottom=[];
 
-  const top=pointPairs.map((p,i)=>{
-    const wave=Math.sin(i*1.8)*(shape.curve-50)*.25;
-    return {x:p.x,y:p.y-width/2+wave};
-  });
-  const bottom=[...pointPairs].reverse().map((p,i)=>{
-    const wave=Math.sin((pointPairs.length-1-i)*1.8)*(shape.curve-50)*.12;
-    return {x:p.x,y:p.y+width/2+wave};
+  samples.forEach((p,i)=>{
+    const before=samples[Math.max(0,i-1)],after=samples[Math.min(samples.length-1,i+1)];
+    const dx=after.x-before.x,dy=after.y-before.y;
+    const len=Math.hypot(dx,dy)||1;
+    const nx=-dy/len,ny=dx/len;
+    const taper=1-(i/(samples.length-1))*Math.min(.62,shape.tip/145);
+    const wave=Math.sin((i/(samples.length-1))*Math.PI*4)*(shape.curve-50)*.08;
+    const half=Math.max(3,baseWidth*taper/2+wave);
+    top.push({x:p.x+nx*half,y:p.y+ny*half});
+    bottom.push({x:p.x-nx*half,y:p.y-ny*half});
   });
 
-  const tipX=Math.min(930,pointPairs.at(-1).x+25+shape.tip*.45);
-  const tipY=pointPairs.at(-1).y;
+  const tipBase=samples.at(-1);
+  const prev=samples.at(-2)||tipBase;
+  const tdx=tipBase.x-prev.x,tdy=tipBase.y-prev.y,tlen=Math.hypot(tdx,tdy)||1;
+  const tipLength=22+shape.tip*.65;
+  const tip={x:tipBase.x+tdx/tlen*tipLength,y:tipBase.y+tdy/tlen*tipLength};
   const bladePath=[
     `M ${top[0].x} ${top[0].y}`,
     ...top.slice(1).map(p=>`L ${p.x} ${p.y}`),
-    `L ${tipX} ${tipY}`,
-    ...bottom.map(p=>`L ${p.x} ${p.y}`),
+    `L ${tip.x} ${tip.y}`,
+    ...bottom.reverse().map(p=>`L ${p.x} ${p.y}`),
     'Z'
   ].join(' ');
 
-  const controlPath=pointPairs.map((p,i)=>(i===0?'M':'L')+` ${p.x} ${p.y}`).join(' ');
+  const notchIndex=Math.floor(samples.length*.62);
+  const notchPoint=samples[notchIndex];
   const notchDepth=shape.notch*.28;
-  const notchX=startX+usable*.62;
+  const selected=Number.isInteger(selectedPointIndex)?selectedPointIndex:-1;
 
   svg.innerHTML=`
     <defs>
@@ -157,12 +191,17 @@ function drawShape(svg,shapeInput){
     ${[1,2,3,4,5,6,7,8,9].map(i=>`<line class="shape-grid-line" x1="${i*100}" y1="0" x2="${i*100}" y2="360"/>`).join('')}
     ${[1,2,3].map(i=>`<line class="shape-grid-line" x1="0" y1="${i*90}" x2="1000" y2="${i*90}"/>`).join('')}
     <path d="${bladePath}" fill="url(#metal-${svg.id})" stroke="#f1d08a" stroke-width="${1+shape.thickness/35}" filter="url(#glow-${svg.id})"/>
-    ${shape.notch>3?`<path d="M ${notchX} ${tipY-width*.45} l ${notchDepth} ${width*.38} l ${notchDepth} ${-width*.42}" fill="none" stroke="#10141c" stroke-width="${5+shape.thickness/18}"/>`:''}
-    <rect x="${startX-20}" y="${centerY-48}" width="24" height="96" rx="8" fill="#ad7434"/>
-    <rect x="${startX-105}" y="${centerY-18}" width="90" height="36" rx="10" fill="#40292a"/>
-    <circle cx="${startX-2}" cy="${centerY}" r="${14+shape.ornament/10}" fill="none" stroke="#e6b85e" stroke-width="4"/>
-    <path class="control-line" d="${controlPath}" fill="none"/>
-    ${pointPairs.map(p=>`<circle class="control-point" data-point-index="${p.index}" cx="${p.x}" cy="${p.y}" r="10" fill="#f7f8fa" stroke="#171b24" stroke-width="4"/>`).join('')}
+    ${shape.notch>3?`<path d="M ${notchPoint.x} ${notchPoint.y-baseWidth*.35} l ${notchDepth} ${baseWidth*.32} l ${notchDepth} ${-baseWidth*.38}" fill="none" stroke="#10141c" stroke-width="${5+shape.thickness/18}"/>`:''}
+    <rect x="5" y="132" width="95" height="36" rx="10" fill="#40292a" transform="translate(0 30)"/>
+    <rect x="90" y="132" width="24" height="96" rx="8" fill="#ad7434"/>
+    <circle cx="108" cy="180" r="${14+shape.ornament/10}" fill="none" stroke="#e6b85e" stroke-width="4"/>
+    ${anchors.map(a=>`
+      <line class="bezier-handle-line" x1="${a.x}" y1="${a.y}" x2="${a.inX}" y2="${a.inY}"/>
+      <line class="bezier-handle-line" x1="${a.x}" y1="${a.y}" x2="${a.outX}" y2="${a.outY}"/>
+      <circle class="bezier-handle" data-handle="in" data-point-index="${a.index}" cx="${a.inX}" cy="${a.inY}" r="7" fill="#e6b85e" stroke="#171b24" stroke-width="3"/>
+      <circle class="bezier-handle" data-handle="out" data-point-index="${a.index}" cx="${a.outX}" cy="${a.outY}" r="7" fill="#e6b85e" stroke="#171b24" stroke-width="3"/>
+      <circle class="control-point ${a.index===selected?'selected':''}" data-point-index="${a.index}" cx="${a.x}" cy="${a.y}" r="10" fill="#f7f8fa" stroke="#171b24" stroke-width="4"/>
+    `).join('')}
     <text x="28" y="38" fill="#e6b85e" font-size="22">${type.name}</text>
     <text x="28" y="326" fill="#9aa4b4" font-size="17">${shapeFingerprint(shape)}</text>`;
 }
@@ -181,6 +220,8 @@ function loadBlueprint(index){
 
 
 let draggedPointIndex=null;
+let draggedHandle=null;
+let selectedPointIndex=0;
 
 function svgPointFromEvent(svg,event){
   const point=svg.createSVGPoint();
@@ -192,14 +233,36 @@ function svgPointFromEvent(svg,event){
   return {x:local.x,y:local.y};
 }
 
-function updateDraggedPoint(svg,event){
+function updateDraggedElement(svg,event){
   if(draggedPointIndex===null)return;
   const local=svgPointFromEvent(svg,event);
-  const nx=Math.max(0.03,Math.min(0.97,(local.x-110)/760));
-  const ny=Math.max(0.05,Math.min(0.95,(local.y-55)/250));
-  currentShape.points[draggedPointIndex]={x:nx,y:ny};
-  currentShape.points.sort((a,b)=>a.x-b.x);
-  draggedPointIndex=currentShape.points.findIndex(p=>Math.abs(p.x-nx)<.0001&&Math.abs(p.y-ny)<.0001);
+  const point=currentShape.points[draggedPointIndex];
+  if(!point)return;
+
+  if(draggedHandle){
+    const hx=Math.max(-.35,Math.min(.35,(local.x-110)/760-point.x));
+    const hy=Math.max(-.35,Math.min(.35,(local.y-55)/250-point.y));
+    point[draggedHandle+'X']=hx;
+    point[draggedHandle+'Y']=hy;
+
+    if(point.smooth){
+      const opposite=draggedHandle==='in'?'out':'in';
+      const currentLength=Math.hypot(point[opposite+'X'],point[opposite+'Y'])||Math.hypot(hx,hy);
+      const length=Math.hypot(hx,hy)||1;
+      point[opposite+'X']=-hx/length*currentLength;
+      point[opposite+'Y']=-hy/length*currentLength;
+    }
+  }else{
+    const oldX=point.x,oldY=point.y;
+    const nx=Math.max(0.02,Math.min(0.98,(local.x-110)/760));
+    const ny=Math.max(0.05,Math.min(0.95,(local.y-55)/250));
+    point.x=nx;point.y=ny;
+    const dx=nx-oldX,dy=ny-oldY;
+    // Handles are relative, so they naturally move with the anchor.
+    currentShape.points.sort((a,b)=>a.x-b.x);
+    draggedPointIndex=currentShape.points.indexOf(point);
+    selectedPointIndex=draggedPointIndex;
+  }
   updatePreview();
 }
 
@@ -212,7 +275,15 @@ function addControlPoint(){
     if(gap>bestGap){bestGap=gap;bestIndex=i}
   }
   const a=points[bestIndex],b=points[bestIndex+1];
-  points.splice(bestIndex+1,0,{x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+  points.splice(bestIndex+1,0,{
+    x:(a.x+b.x)/2,
+    y:(a.y+b.y)/2,
+    inX:-Math.max(.035,(b.x-a.x)*.18),
+    inY:0,
+    outX:Math.max(.035,(b.x-a.x)*.18),
+    outY:0,
+    smooth:true
+  });
   currentShape.points=points;
   updatePreview();
   showToast('制御点を追加しました');
@@ -240,21 +311,49 @@ function resetCurrentShape(){
   showToast('形状を初期状態へ戻しました');
 }
 
+
+function smoothSelectedPoint(){
+  const p=currentShape.points[selectedPointIndex];
+  if(!p)return showToast('先に白い頂点を選択してください');
+  p.smooth=true;
+  const outLength=Math.hypot(p.outX,p.outY)||.08;
+  const inLength=Math.hypot(p.inX,p.inY)||.08;
+  const angle=Math.atan2(p.outY,p.outX);
+  p.outX=Math.cos(angle)*outLength;p.outY=Math.sin(angle)*outLength;
+  p.inX=-Math.cos(angle)*inLength;p.inY=-Math.sin(angle)*inLength;
+  updatePreview();showToast('選択点を滑らかな曲線にしました');
+}
+
+function cornerSelectedPoint(){
+  const p=currentShape.points[selectedPointIndex];
+  if(!p)return showToast('先に白い頂点を選択してください');
+  p.smooth=false;
+  updatePreview();showToast('選択点を角として独立編集できます');
+}
+
 function bindShapeEditor(svg){
   if(!svg)return;
   svg.addEventListener('pointerdown',event=>{
-    const target=event.target.closest?.('[data-point-index]');
+    const handle=event.target.closest?.('[data-handle]');
+    const anchor=event.target.closest?.('.control-point');
+    const target=handle||anchor;
     if(!target)return;
     draggedPointIndex=Number(target.dataset.pointIndex);
+    selectedPointIndex=draggedPointIndex;
+    draggedHandle=handle?.dataset.handle||null;
     svg.setPointerCapture?.(event.pointerId);
+    updatePreview();
     event.preventDefault();
   });
   svg.addEventListener('pointermove',event=>{
     if(draggedPointIndex===null)return;
-    updateDraggedPoint(svg,event);
+    updateDraggedElement(svg,event);
     event.preventDefault();
   });
-  const stop=()=>{draggedPointIndex=null};
+  const stop=()=>{
+    draggedPointIndex=null;
+    draggedHandle=null;
+  };
   svg.addEventListener('pointerup',stop);
   svg.addEventListener('pointercancel',stop);
 }
@@ -267,6 +366,8 @@ document.querySelector('[data-action="add-point"]').onclick=addControlPoint;
 document.querySelector('[data-action="remove-point"]').onclick=removeControlPoint;
 document.querySelector('[data-action="mirror-shape"]').onclick=mirrorShape;
 document.querySelector('[data-action="reset-shape"]').onclick=resetCurrentShape;
+document.querySelector('[data-action="smooth-point"]').onclick=smoothSelectedPoint;
+document.querySelector('[data-action="corner-point"]').onclick=cornerSelectedPoint;
 document.querySelector('[data-action="start-free-forge"]').onclick=()=>startForge('自由鍛造');
 document.querySelector('[data-action="start-blueprint-forge"]').onclick=()=>startForge('設計図鍛造');
 document.querySelector('[data-action="advance-forge"]').onclick=advanceForge;
