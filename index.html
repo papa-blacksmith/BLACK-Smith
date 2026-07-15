@@ -15,7 +15,7 @@
     <p class="sub">FORGE OF LEGENDS</p>
     <p class="slogan">魂を打て。<br>世界に一本だけの武器を。</p>
     <button class="primary" id="enterButton">鍛冶場へ入る</button>
-    <small class="version">Ver0.6 Editor Boost</small>
+    <small class="version">Ver0.6 clean refactor</small>
   </section>
 
   <section id="home" class="screen">
@@ -50,29 +50,17 @@
 
       <div class="editor-panel">
         <svg id="weaponEditor" class="weapon-editor" viewBox="0 0 1000 360" aria-label="武器形状エディタ"></svg>
-        <div class="hint">白＝頂点 / 金＝ハンドル / 青＝局所幅</div>
+        <div class="hint">白＝頂点 / 金＝ベジェハンドル</div>
       </div>
 
       <div class="toolbar">
-        <button class="secondary" id="undoShape">↶ Undo</button>
-        <button class="secondary" id="redoShape">↷ Redo</button>
         <button class="secondary" id="addPoint">点を追加</button>
         <button class="secondary" id="removePoint">選択点を削除</button>
         <button class="secondary" id="smoothPoint">滑らか</button>
         <button class="secondary" id="cornerPoint">角にする</button>
         <button class="secondary" id="mirrorShape">左右反転</button>
-        <button class="secondary" id="duplicatePoint">点を複製</button>
         <button class="secondary" id="resetShape">リセット</button>
       </div>
-
-      <div class="editor-tabs">
-        <button class="tab active" data-editor-tab="shape">形状</button>
-        <button class="tab" data-editor-tab="edge">刃・穴</button>
-        <button class="tab" data-editor-tab="ornament">装飾</button>
-        <button class="tab" data-editor-tab="preset">プリセット</button>
-      </div>
-
-      <div id="advancedEditorPanel"></div>
 
       <div id="shapeControls"></div>
 
