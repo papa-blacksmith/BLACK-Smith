@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#090a0e">
-<title>BLACK Smith Ver0.6-dev.1</title>
+<title>BLACK Smith Ver0.6-dev.2</title>
 <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
@@ -30,7 +30,16 @@
  <div class="card">
   <div class="preview"><div class="bigWeapon" id="forgePreview">⚔️</div></div>
   <div class="control"><label><span>武器種</span><b id="typeLabel"></b></label><div class="types" id="typeGrid"></div></div>
-  <div class="shape-preview-wrap"><svg id="forgeShapeSvg" class="shape-svg" viewBox="0 0 1000 360" aria-label="武器形状プレビュー"></svg></div>
+  <div class="shape-preview-wrap editor-wrap">
+    <svg id="forgeShapeSvg" class="shape-svg editable-shape" viewBox="0 0 1000 360" aria-label="武器形状プレビュー"></svg>
+    <div class="editor-hint">白い点をドラッグして刀身を変形</div>
+  </div>
+  <div class="editor-toolbar">
+    <button class="secondary compact" data-action="add-point">制御点を追加</button>
+    <button class="secondary compact" data-action="remove-point">最後の点を削除</button>
+    <button class="secondary compact" data-action="mirror-shape">左右反転</button>
+    <button class="secondary compact" data-action="reset-shape">形状リセット</button>
+  </div>
   <div id="sharedShapeControls"></div>
   <div class="grid2"><button class="secondary" data-action="save-current-blueprint">現在の形を設計図保存</button><button class="primary" data-action="start-free-forge">本鍛造へ</button></div>
  </div>
@@ -42,7 +51,10 @@
   <div class="preview"><div class="bigWeapon" id="bpPreview">⚔️</div></div>
   <div class="control"><label><span>設計図名</span></label><input id="bpName" value="無銘の設計図" maxlength="24" class="text-input"></div>
   <div class="control"><label><span>武器種</span><b id="bpTypeLabel"></b></label><div class="types" id="bpTypeGrid"></div></div>
-  <div class="shape-preview-wrap"><svg id="bpShapeSvg" class="shape-svg" viewBox="0 0 1000 360" aria-label="設計図形状プレビュー"></svg></div>
+  <div class="shape-preview-wrap editor-wrap">
+    <svg id="bpShapeSvg" class="shape-svg editable-shape" viewBox="0 0 1000 360" aria-label="設計図形状プレビュー"></svg>
+    <div class="editor-hint">自由鍛造と同じ形状を共有</div>
+  </div>
   <p class="muted small">設計図と自由鍛造は、同じ形状データを共有します。</p>
   <div class="grid2"><button class="secondary" data-action="save-blueprint">設計図保存</button><button class="primary" data-action="start-blueprint-forge">鍛造する</button></div>
  </div>

@@ -108,36 +108,61 @@ function drawShape(svg,shapeInput){
   if(!svg)return;
   const shape=normalizeShape(shapeInput);
   const type=TYPES[shape.weaponType]||TYPES[0];
-  const length=540+shape.length*3.2;
-  const width=24+shape.width*.72;
-  const curve=(shape.curve-50)*1.25;
-  const tip=25+shape.tip*.7;
-  const notch=shape.notch*.55;
-  const ornament=shape.ornament;
-  const startX=100,endX=Math.min(920,startX+length);
+  const startX=110;
+  const usable=760;
   const centerY=180;
-  const upper=`M ${startX} ${centerY-width/2}
-    Q ${startX+length*.34} ${centerY-width/2-curve}, ${startX+length*.66} ${centerY-width/2-curve*.35}
-    Q ${endX-tip} ${centerY-width/2}, ${endX} ${centerY}`;
-  const lower=`Q ${endX-tip} ${centerY+width/2}, ${startX+length*.66} ${centerY+width/2+curve*.2}
-    Q ${startX+length*.34} ${centerY+width/2+curve*.55}, ${startX} ${centerY+width/2} Z`;
-  const notchPath=notch>8?`M ${startX+length*.55} ${centerY-width/2} l ${notch} ${width*.35} l ${notch} ${-width*.38}`:'';
+  const width=26+shape.width*.72;
+  const pointPairs=shape.points.map((p,i)=>{
+    const x=startX+p.x*usable;
+    const y=55+p.y*250;
+    return {x,y,index:i};
+  }).sort((a,b)=>a.x-b.x);
+
+  const top=pointPairs.map((p,i)=>{
+    const wave=Math.sin(i*1.8)*(shape.curve-50)*.25;
+    return {x:p.x,y:p.y-width/2+wave};
+  });
+  const bottom=[...pointPairs].reverse().map((p,i)=>{
+    const wave=Math.sin((pointPairs.length-1-i)*1.8)*(shape.curve-50)*.12;
+    return {x:p.x,y:p.y+width/2+wave};
+  });
+
+  const tipX=Math.min(930,pointPairs.at(-1).x+25+shape.tip*.45);
+  const tipY=pointPairs.at(-1).y;
+  const bladePath=[
+    `M ${top[0].x} ${top[0].y}`,
+    ...top.slice(1).map(p=>`L ${p.x} ${p.y}`),
+    `L ${tipX} ${tipY}`,
+    ...bottom.map(p=>`L ${p.x} ${p.y}`),
+    'Z'
+  ].join(' ');
+
+  const controlPath=pointPairs.map((p,i)=>(i===0?'M':'L')+` ${p.x} ${p.y}`).join(' ');
+  const notchDepth=shape.notch*.28;
+  const notchX=startX+usable*.62;
+
   svg.innerHTML=`
     <defs>
-      <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <linearGradient id="metal-${svg.id}" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="#ffffff"/>
         <stop offset=".28" stop-color="${shape.color}"/>
         <stop offset=".68" stop-color="#6d7380"/>
         <stop offset="1" stop-color="#232832"/>
       </linearGradient>
-      <filter id="glow"><feGaussianBlur stdDeviation="${2+ornament/25}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <filter id="glow-${svg.id}">
+        <feGaussianBlur stdDeviation="${2+shape.ornament/25}" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
     </defs>
-    <rect width="1000" height="360" fill="transparent"/>
-    <path d="${upper} ${lower}" fill="url(#metal)" stroke="#f1d08a" stroke-width="${1+shape.thickness/35}" filter="url(#glow)"/>
-    <path d="${notchPath}" fill="none" stroke="#151922" stroke-width="${5+shape.thickness/15}"/>
+    ${[1,2,3,4,5,6,7,8,9].map(i=>`<line class="shape-grid-line" x1="${i*100}" y1="0" x2="${i*100}" y2="360"/>`).join('')}
+    ${[1,2,3].map(i=>`<line class="shape-grid-line" x1="0" y1="${i*90}" x2="1000" y2="${i*90}"/>`).join('')}
+    <path d="${bladePath}" fill="url(#metal-${svg.id})" stroke="#f1d08a" stroke-width="${1+shape.thickness/35}" filter="url(#glow-${svg.id})"/>
+    ${shape.notch>3?`<path d="M ${notchX} ${tipY-width*.45} l ${notchDepth} ${width*.38} l ${notchDepth} ${-width*.42}" fill="none" stroke="#10141c" stroke-width="${5+shape.thickness/18}"/>`:''}
     <rect x="${startX-20}" y="${centerY-48}" width="24" height="96" rx="8" fill="#ad7434"/>
     <rect x="${startX-105}" y="${centerY-18}" width="90" height="36" rx="10" fill="#40292a"/>
-    <circle cx="${startX-2}" cy="${centerY}" r="${14+ornament/10}" fill="none" stroke="#e6b85e" stroke-width="4"/>
+    <circle cx="${startX-2}" cy="${centerY}" r="${14+shape.ornament/10}" fill="none" stroke="#e6b85e" stroke-width="4"/>
+    <path class="control-line" d="${controlPath}" fill="none"/>
+    ${pointPairs.map(p=>`<circle class="control-point" data-point-index="${p.index}" cx="${p.x}" cy="${p.y}" r="10" fill="#f7f8fa" stroke="#171b24" stroke-width="4"/>`).join('')}
     <text x="28" y="38" fill="#e6b85e" font-size="22">${type.name}</text>
     <text x="28" y="326" fill="#9aa4b4" font-size="17">${shapeFingerprint(shape)}</text>`;
 }
@@ -154,10 +179,94 @@ function loadBlueprint(index){
   showToast(`設計図「${bp.name}」を読み込みました`);
 }
 
+
+let draggedPointIndex=null;
+
+function svgPointFromEvent(svg,event){
+  const point=svg.createSVGPoint();
+  point.x=event.clientX;
+  point.y=event.clientY;
+  const matrix=svg.getScreenCTM();
+  if(!matrix)return {x:0,y:0};
+  const local=point.matrixTransform(matrix.inverse());
+  return {x:local.x,y:local.y};
+}
+
+function updateDraggedPoint(svg,event){
+  if(draggedPointIndex===null)return;
+  const local=svgPointFromEvent(svg,event);
+  const nx=Math.max(0.03,Math.min(0.97,(local.x-110)/760));
+  const ny=Math.max(0.05,Math.min(0.95,(local.y-55)/250));
+  currentShape.points[draggedPointIndex]={x:nx,y:ny};
+  currentShape.points.sort((a,b)=>a.x-b.x);
+  draggedPointIndex=currentShape.points.findIndex(p=>Math.abs(p.x-nx)<.0001&&Math.abs(p.y-ny)<.0001);
+  updatePreview();
+}
+
+function addControlPoint(){
+  if(currentShape.points.length>=12)return showToast('制御点は最大12個です');
+  const points=[...currentShape.points].sort((a,b)=>a.x-b.x);
+  let bestIndex=0,bestGap=-1;
+  for(let i=0;i<points.length-1;i++){
+    const gap=points[i+1].x-points[i].x;
+    if(gap>bestGap){bestGap=gap;bestIndex=i}
+  }
+  const a=points[bestIndex],b=points[bestIndex+1];
+  points.splice(bestIndex+1,0,{x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+  currentShape.points=points;
+  updatePreview();
+  showToast('制御点を追加しました');
+}
+
+function removeControlPoint(){
+  if(currentShape.points.length<=2)return showToast('制御点は最低2個必要です');
+  currentShape.points.pop();
+  updatePreview();
+  showToast('最後の制御点を削除しました');
+}
+
+function mirrorShape(){
+  currentShape.points=currentShape.points.map(p=>({x:1-p.x,y:p.y})).sort((a,b)=>a.x-b.x);
+  currentShape.twist*=-1;
+  updatePreview();
+  showToast('形状を左右反転しました');
+}
+
+function resetCurrentShape(){
+  const weaponType=selectedType;
+  currentShape=cloneShape(DEFAULT_SHAPE);
+  currentShape.weaponType=weaponType;
+  updatePreview();
+  showToast('形状を初期状態へ戻しました');
+}
+
+function bindShapeEditor(svg){
+  if(!svg)return;
+  svg.addEventListener('pointerdown',event=>{
+    const target=event.target.closest?.('[data-point-index]');
+    if(!target)return;
+    draggedPointIndex=Number(target.dataset.pointIndex);
+    svg.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+  });
+  svg.addEventListener('pointermove',event=>{
+    if(draggedPointIndex===null)return;
+    updateDraggedPoint(svg,event);
+    event.preventDefault();
+  });
+  const stop=()=>{draggedPointIndex=null};
+  svg.addEventListener('pointerup',stop);
+  svg.addEventListener('pointercancel',stop);
+}
+
 document.addEventListener('click',e=>{const goBtn=e.target.closest('[data-go]');if(goBtn)go(goBtn.dataset.go);const navBtn=e.target.closest('[data-page]');if(navBtn)go(navBtn.dataset.page);const typeBtn=e.target.closest('[data-type]');if(typeBtn){if(typeBtn.dataset.mode==='forge')selectedType=+typeBtn.dataset.type;else blueprintType=+typeBtn.dataset.type;renderTypes();updatePreview()}const diffBtn=e.target.closest('[data-diff]');if(diffBtn){selectedDifficulty=+diffBtn.dataset.diff;renderExplore()}const weaponBtn=e.target.closest('[data-weapon-index]');if(weaponBtn)showWeapon(state.weapons[+weaponBtn.dataset.weaponIndex]);const bpBtn=e.target.closest('[data-blueprint-index]');if(bpBtn)loadBlueprint(+bpBtn.dataset.blueprintIndex);if(e.target.closest('[data-close-modal]')){$('modal').classList.remove('show');go('inventory')}if(e.target===$('modal'))$('modal').classList.remove('show')})
 document.querySelector('[data-action="enter"]').onclick=enter;
 document.querySelector('[data-action="save-blueprint"]').onclick=saveBlueprint;
 document.querySelector('[data-action="save-current-blueprint"]').onclick=()=>{blueprintType=selectedType;$('bpName').value=`${TYPES[selectedType].name}設計図`;saveBlueprint();};
+document.querySelector('[data-action="add-point"]').onclick=addControlPoint;
+document.querySelector('[data-action="remove-point"]').onclick=removeControlPoint;
+document.querySelector('[data-action="mirror-shape"]').onclick=mirrorShape;
+document.querySelector('[data-action="reset-shape"]').onclick=resetCurrentShape;
 document.querySelector('[data-action="start-free-forge"]').onclick=()=>startForge('自由鍛造');
 document.querySelector('[data-action="start-blueprint-forge"]').onclick=()=>startForge('設計図鍛造');
 document.querySelector('[data-action="advance-forge"]').onclick=advanceForge;
@@ -172,5 +281,7 @@ document.addEventListener('input',e=>{
   if(e.target.id==='shapeMaterial'){currentShape.material=e.target.value;updatePreview()}
   if(e.target.id==='shapeColor'){currentShape.color=e.target.value;updatePreview()}
 });
+bindShapeEditor($('forgeShapeSvg'));
+bindShapeEditor($('bpShapeSvg'));
 setInterval(()=>{if($('explore').classList.contains('active'))renderExplore()},1000);
 resetDaily();renderAll();

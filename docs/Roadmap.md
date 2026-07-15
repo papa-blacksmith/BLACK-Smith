@@ -10,3 +10,10 @@
 - JSONデータブリッジ
 - MeshTemplate
 - DataTable移行
+
+## Ver0.6-dev.2
+- SVG制御点の直接ドラッグ編集
+- 制御点追加・削除
+- 左右反転
+- 形状リセット
+- スマホのPointer Events対応
