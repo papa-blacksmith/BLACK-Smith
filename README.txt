@@ -1,19 +1,21 @@
-BLACK Smith Ver0.4 演出強化版
+BLACK Smith Ver0.5.1
 
-追加内容
-- ゲームUI刷新
-- 鍛冶場背景
-- 炉の炎アニメーション
-- 火花エフェクト
-- CSS製3D風武器
-- レアリティ別フラッシュ演出
-- Web Audio APIによる効果音
-- 音声ON/OFFボタン
-- GitHub Pages対応
-
-更新方法
-1. index.htmlをBLACK-Smithフォルダへ上書き
-2. GitHub Desktopで Update to Ver0.4 Effects と入力
-3. Commit to main
+GitHub Pages更新方法
+1. ZIPを解凍
+2. index.htmlをBLACK-Smithフォルダへ上書き
+3. GitHub DesktopでCommit
 4. Push origin
 5. 1〜3分後にCtrl+Shift+R
+
+収録機能
+- ガチャなし
+- 自由鍛造・自由設計図
+- 9武器種
+- 6工程鍛造
+- レアリティ判定
+- スキル判定
+- 呪い・超越
+- 午前5時更新
+- 5段階探索
+- 14本保管
+- 特殊背景図鑑
