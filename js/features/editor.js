@@ -9,6 +9,7 @@ function cubic(p0,p1,p2,p3,t){
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 function interpolateWidth(points,t){
   if(points.length===1)return points[0].width||1;
   const scaled=t*(points.length-1);
@@ -59,6 +60,8 @@ function weaponTypeOverlay(typeName){
 
 =======
 >>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
+=======
+>>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
 export function drawEditor(svg,shapeInput,selectedIndex=0,typeName=""){
   const shape=normalizeShape(shapeInput);
   const sx=110,sy=55,ux=760,uy=250;
@@ -99,6 +102,7 @@ export function drawEditor(svg,shapeInput,selectedIndex=0,typeName=""){
     ${[1,2,3,4,5,6,7,8,9].map(i=>`<line class="grid-line" x1="${i*100}" y1="0" x2="${i*100}" y2="360"/>`).join("")}
     ${[1,2,3].map(i=>`<line class="grid-line" x1="0" y1="${i*90}" x2="1000" y2="${i*90}"/>`).join("")}
 <<<<<<< HEAD
+<<<<<<< HEAD
     <g transform="${transform}">
       <path d="${path}" fill="url(#metal)" stroke="#f1d08a" stroke-width="${1+shape.thickness/35}" filter="url(#weaponGlow)" opacity="${["ハンマー","斧","ナックル"].includes(typeName)?0.15:1}"/>
       ${weaponTypeOverlay(typeName)}
@@ -116,6 +120,8 @@ export function drawEditor(svg,shapeInput,selectedIndex=0,typeName=""){
       `).join("")}
     </g>
 =======
+=======
+>>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
     <path d="${path}" fill="url(#metal)" stroke="#f1d08a" stroke-width="${1+shape.thickness/35}"/>
     <rect x="5" y="162" width="95" height="36" rx="10" fill="#40292a"/>
     <rect x="90" y="132" width="24" height="96" rx="8" fill="#ad7434"/>
@@ -126,6 +132,9 @@ export function drawEditor(svg,shapeInput,selectedIndex=0,typeName=""){
       <circle class="handle" data-handle="out" data-index="${a.index}" cx="${a.outX}" cy="${a.outY}" r="7" fill="#e6b85e"/>
       <circle class="anchor ${a.index===selectedIndex?"selected":""}" data-index="${a.index}" cx="${a.x}" cy="${a.y}" r="10" fill="#fff" stroke="#171b24" stroke-width="4"/>
     `).join("")}
+<<<<<<< HEAD
+>>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
+=======
 >>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
     <text x="28" y="36" fill="#e6b85e" font-size="22">${typeName}</text>
     <text x="28" y="330" fill="#98a2b3" font-size="17">${fingerprint(shape)}</text>`;
