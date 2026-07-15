@@ -1,113 +1,127 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#090a0e">
-<title>BLACK Smith Ver0.6-dev.4</title>
-<link rel="stylesheet" href="./css/style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#090a0e">
+  <title>BLACK Smith Ver0.6</title>
+  <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
 <div id="app">
-<section id="title" class="screen title active">
- <div class="mark"></div>
- <div class="logo">BLACK<br>SMITH<small>FORGE OF LEGENDS</small></div>
- <div class="slogan">魂を打て。<br>世界に一本だけの武器を。</div>
- <button class="primary" data-action="enter">鍛冶場へ入る</button>
-</section>
+  <section id="title" class="screen active title-screen">
+    <div class="logo-mark"></div>
+    <h1>BLACK<br>SMITH</h1>
+    <p class="sub">FORGE OF LEGENDS</p>
+    <p class="slogan">魂を打て。<br>世界に一本だけの武器を。</p>
+    <button class="primary" id="enterButton">鍛冶場へ入る</button>
+    <small class="version">Ver0.6 clean refactor</small>
+  </section>
 
-<section id="home" class="screen">
- <div class="top"><div class="brand">BLACK Smith</div><div class="pill">鍛造 <b id="remainTop">3/3</b></div></div>
- <div class="card hero"><div class="bigWeapon" id="heroWeapon">⚔️</div></div>
- <button class="primary" data-go="forge">自由鍛造を始める</button>
- <button class="card menu" data-go="blueprint"><span>📜</span><span><b>設計図制作</b><small>形状を自由に保存</small></span><span>›</span></button>
- <button class="card menu" data-go="explore"><span>🧭</span><span><b>探索</b><small>5段階の時間探索</small></span><span>›</span></button>
- <button class="card menu" data-go="collection"><span>✦</span><span><b>特殊背景図鑑</b><small>超低確率の隠し演出</small></span><span>›</span></button>
-</section>
+  <section id="home" class="screen">
+    <header class="topbar">
+      <strong>BLACK Smith</strong>
+      <span class="pill">鍛造 <b id="forgeRemaining">3/3</b></span>
+    </header>
 
-<section id="forge" class="screen">
- <div class="top"><div class="brand">自由鍛造</div><div class="pill" id="remainForge">3/3</div></div>
- <div class="card">
-  <div class="preview"><div class="bigWeapon" id="forgePreview">⚔️</div></div>
-  <div class="control"><label><span>武器種</span><b id="typeLabel"></b></label><div class="types" id="typeGrid"></div></div>
-  <div class="shape-preview-wrap editor-wrap">
-    <svg id="forgeShapeSvg" class="shape-svg editable-shape" viewBox="0 0 1000 360" aria-label="武器形状プレビュー"></svg>
-    <div class="editor-hint">白＝頂点 / 金＝ベジェハンドル（ドラッグ対応）</div>
+    <div class="card hero">
+      <div class="hero-icon" id="heroWeapon">⚔️</div>
+    </div>
+
+    <button class="primary" data-go="forge">自由鍛造</button>
+
+    <button class="card menu" data-go="blueprints">
+      <span>📜</span><span><b>設計図</b><small>保存・読込・再利用</small></span><span>›</span>
+    </button>
+
+    <button class="card menu" data-go="inventory">
+      <span>▦</span><span><b>武器保管庫</b><small>最大14本</small></span><span>›</span>
+    </button>
+  </section>
+
+  <section id="forge" class="screen">
+    <header class="topbar">
+      <strong>自由鍛造</strong>
+      <span class="pill" id="forgeCounter">3/3</span>
+    </header>
+
+    <div class="card">
+      <div class="type-grid" id="weaponTypes"></div>
+
+      <div class="editor-panel">
+        <svg id="weaponEditor" class="weapon-editor" viewBox="0 0 1000 360" aria-label="武器形状エディタ"></svg>
+        <div class="hint">白＝頂点 / 金＝ベジェハンドル</div>
+      </div>
+
+      <div class="toolbar">
+        <button class="secondary" id="addPoint">点を追加</button>
+        <button class="secondary" id="removePoint">選択点を削除</button>
+        <button class="secondary" id="smoothPoint">滑らか</button>
+        <button class="secondary" id="cornerPoint">角にする</button>
+        <button class="secondary" id="mirrorShape">左右反転</button>
+        <button class="secondary" id="resetShape">リセット</button>
+      </div>
+
+      <div id="shapeControls"></div>
+
+      <div class="grid2">
+        <button class="secondary" id="saveBlueprintFromForge">設計図保存</button>
+        <button class="primary" id="startForge">本鍛造へ</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="blueprints" class="screen">
+    <header class="topbar">
+      <strong>設計図</strong>
+      <span class="pill"><b id="blueprintCount">0</b>件</span>
+    </header>
+
+    <div class="card">
+      <input id="blueprintName" class="text-input" value="無銘の設計図" maxlength="30">
+      <button class="primary mt12" id="saveBlueprint">現在の形を保存</button>
+    </div>
+
+    <div id="blueprintList"></div>
+  </section>
+
+  <section id="process" class="screen">
+    <header class="topbar">
+      <strong>鍛造工程</strong>
+      <span class="pill">品質 <b id="quality">50</b></span>
+    </header>
+
+    <div class="steps" id="steps"></div>
+
+    <div class="card">
+      <div class="process-view" id="processIcon">🔥</div>
+      <p class="center" id="processText"></p>
+      <button class="primary" id="advanceForge"></button>
+    </div>
+  </section>
+
+  <section id="inventory" class="screen">
+    <header class="topbar">
+      <strong>武器保管庫</strong>
+      <span class="pill"><b id="inventoryCount">0</b>/14</span>
+    </header>
+    <div class="weapon-grid" id="inventoryGrid"></div>
+  </section>
+
+  <nav class="nav" id="nav">
+    <button data-go="home">ホーム</button>
+    <button data-go="forge">自由鍛造</button>
+    <button data-go="blueprints">設計図</button>
+    <button data-go="inventory">保管庫</button>
+  </nav>
+
+  <div id="modal" class="modal">
+    <div id="modalSheet" class="modal-sheet"></div>
   </div>
-  <div class="editor-toolbar">
-    <button class="secondary compact" data-action="add-point">制御点を追加</button>
-    <button class="secondary compact" data-action="remove-point">最後の点を削除</button>
-    <button class="secondary compact" data-action="mirror-shape">左右反転</button>
-    <button class="secondary compact" data-action="reset-shape">形状リセット</button>
-    <button class="secondary compact" data-action="smooth-point">選択点を滑らかに</button>
-    <button class="secondary compact" data-action="corner-point">選択点を角にする</button>
-  </div>
-  <div id="sharedShapeControls"></div>
-  <div class="grid2"><button class="secondary" data-action="save-current-blueprint">現在の形を設計図保存</button><button class="primary" data-action="start-free-forge">本鍛造へ</button></div>
- </div>
-</section>
 
-<section id="blueprint" class="screen">
- <div class="top"><div class="brand">設計図制作</div><div class="pill">保存 <b id="bpCount">0</b></div></div>
- <div class="card">
-  <div class="preview"><div class="bigWeapon" id="bpPreview">⚔️</div></div>
-  <div class="control"><label><span>設計図名</span></label><input id="bpName" value="無銘の設計図" maxlength="24" class="text-input"></div>
-  <div class="control"><label><span>武器種</span><b id="bpTypeLabel"></b></label><div class="types" id="bpTypeGrid"></div></div>
-  <div class="shape-preview-wrap editor-wrap">
-    <svg id="bpShapeSvg" class="shape-svg editable-shape" viewBox="0 0 1000 360" aria-label="設計図形状プレビュー"></svg>
-    <div class="editor-hint">自由鍛造と同じ形状を共有</div>
-  </div>
-  <p class="muted small">設計図と自由鍛造は、同じ形状データを共有します。</p>
-  <div class="grid2"><button class="secondary" data-action="save-blueprint">設計図保存</button><button class="primary" data-action="start-blueprint-forge">鍛造する</button></div>
- </div>
- <div id="bpList"></div>
-</section>
-
-<section id="process" class="screen">
- <div class="top"><div class="brand">鍛造工程</div><div class="pill">品質 <b id="quality">50</b></div></div>
- <div class="steps" id="steps"></div>
- <div class="card">
-  <div class="preview"><div class="bigWeapon" id="processIcon">🔥</div></div>
-  <p id="processText" class="center strong"></p>
-  <button class="primary" id="processBtn" data-action="advance-forge"></button>
- </div>
-</section>
-
-<section id="inventory" class="screen">
- <div class="top"><div class="brand">武器保管庫</div><div class="pill"><b id="invCount">0</b>/14</div></div>
- <p class="muted small">武器種別9枠＋フリーポケット5枠</p>
- <div class="weaponGrid" id="inventoryGrid"></div>
-</section>
-
-<section id="explore" class="screen">
- <div class="top"><div class="brand">探索</div><div class="pill" id="exploreStatus">待機中</div></div>
- <div class="card">
-  <div id="exploreOptions"></div>
-  <button class="primary" id="exploreBtn" data-action="start-explore">探索開始</button>
-  <div id="running" class="hidden">
-   <p id="runningLabel"></p>
-   <div class="progress"><i id="progress"></i></div>
-   <button class="secondary mt12" data-action="claim-explore">帰還確認</button>
-  </div>
- </div>
-</section>
-
-<section id="collection" class="screen">
- <div class="top"><div class="brand">特殊背景図鑑</div><div class="pill"><b id="bgCount">0</b>/4</div></div>
- <div class="weaponGrid" id="bgGrid"></div>
-</section>
-
-<nav class="nav" id="nav">
- <button data-page="home">ホーム</button>
- <button data-page="forge">自由鍛造</button>
- <button data-page="blueprint">設計図</button>
- <button data-page="explore">探索</button>
- <button data-page="inventory">保管庫</button>
-</nav>
-
-<div id="modal" class="modal"><div class="sheet" id="sheet"></div></div>
-<div id="toast" class="toast"></div>
+  <div id="toast" class="toast"></div>
 </div>
+
 <script type="module" src="./js/main.js"></script>
 </body>
 </html>
