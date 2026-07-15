@@ -1,12 +1,10 @@
 import { TYPES, RARITIES } from "./core/data.js";
 import { loadState, saveState } from "./core/storage.js";
-import { DEFAULT_SHAPE, cloneShape, normalizeShape, fingerprint, createWeaponDefault } from "./core/shapeModel.js";
+import { DEFAULT_SHAPE, cloneShape, normalizeShape, fingerprint } from "./core/shapeModel.js";
 import { drawEditor, eventToLocal } from "./features/editor.js";
 
 const $=id=>document.getElementById(id);
-let state=loadState(),selectedType=0,selectedPoint=0;
-let shapesByType=Array.from({length:9},(_,i)=>createWeaponDefault(i));
-let shape=shapesByType[0];
+let state=loadState(),shape=cloneShape(DEFAULT_SHAPE),selectedType=0,selectedPoint=0;
 let dragIndex=null,dragHandle=null,dragWidth=false,forgeCtx=null,forgeStep=0,quality=50;
 let activeEditorTab="shape";
 let undoStack=[],redoStack=[];
@@ -30,7 +28,7 @@ function renderTypes(){
 function renderControls(){
   const controls=[["width","全体幅",10,100],["thickness","厚み",5,100],["tip","刃先",0,100],["curve","反り",0,100]];
   $("shapeControls").innerHTML=`<div class="shape-grid">${controls.map(([k,l,min,max])=>`
-    <div class="shape-control"><label><span>${l}</span><b data-live-value="${k}">${Math.round(shape[k])}</b></label>
+    <div class="shape-control"><label><span>${l}</span><b>${Math.round(shape[k])}</b></label>
     <input type="range" min="${min}" max="${max}" value="${shape[k]}" data-shape="${k}"></div>`).join("")}</div>
     <div class="material-row"><select id="material">${["黒鉄","鋼","炎鋼","氷晶鋼","雷鋼","ミスリル"].map(m=>`<option ${shape.material===m?"selected":""}>${m}</option>`).join("")}</select>
     <input id="color" type="color" value="${shape.color}"></div>`;
@@ -44,9 +42,9 @@ function renderAdvancedPanel(){
 
   if(activeEditorTab==="shape"){
     host.innerHTML=`<div class="advanced-panel"><div class="advanced-grid">
-      <div class="advanced-control"><label><span>選択点の局所幅</span><b data-live-value="pointWidth">${Math.round((p.width||1)*100)}%</b></label><input type="range" min="15" max="220" value="${(p.width||1)*100}" data-point-prop="width"></div>
-      <div class="advanced-control"><label><span>上側幅</span><b data-live-value="pointUpper">${Math.round((p.upper||1)*100)}%</b></label><input type="range" min="15" max="220" value="${(p.upper||1)*100}" data-point-prop="upper"></div>
-      <div class="advanced-control"><label><span>下側幅</span><b data-live-value="pointLower">${Math.round((p.lower||1)*100)}%</b></label><input type="range" min="15" max="220" value="${(p.lower||1)*100}" data-point-prop="lower"></div>
+      <div class="advanced-control"><label><span>選択点の局所幅</span><b>${Math.round((p.width||1)*100)}%</b></label><input type="range" min="15" max="220" value="${(p.width||1)*100}" data-point-prop="width"></div>
+      <div class="advanced-control"><label><span>上側幅</span><b>${Math.round((p.upper||1)*100)}%</b></label><input type="range" min="15" max="220" value="${(p.upper||1)*100}" data-point-prop="upper"></div>
+      <div class="advanced-control"><label><span>下側幅</span><b>${Math.round((p.lower||1)*100)}%</b></label><input type="range" min="15" max="220" value="${(p.lower||1)*100}" data-point-prop="lower"></div>
       <div class="advanced-control"><label><span>左右非対称</span><b>${shape.asymmetric?"ON":"OFF"}</b></label><button class="secondary" data-toggle-asymmetry>${shape.asymmetric?"対称に戻す":"非対称にする"}</button></div>
     </div></div>`;
   }else if(activeEditorTab==="edge"){
@@ -63,7 +61,7 @@ function renderAdvancedPanel(){
         ${[["none","なし"],["gem","宝石"],["wing","翼"],["ring","リング"],["chain","チェーン"]].map(([v,l])=>`<option value="${v}" ${shape.ornamentType===v?"selected":""}>${l}</option>`).join("")}</select></div>
       <div class="advanced-control"><label><span>装飾サイズ</span><b>${Math.round(shape.ornamentSize)}</b></label><input type="range" min="0" max="100" value="${shape.ornamentSize}" data-shape="ornamentSize"></div>
       <div class="advanced-control"><label><span>発光</span><b>${Math.round(shape.glow)}</b></label><input type="range" min="0" max="100" value="${shape.glow}" data-shape="glow"></div>
-      <div class="advanced-control"><label><span>ズーム</span><b data-live-value="zoom">${Math.round(shape.zoom*100)}%</b></label><input type="range" min="65" max="180" value="${shape.zoom*100}" data-shape-zoom></div>
+      <div class="advanced-control"><label><span>ズーム</span><b>${Math.round(shape.zoom*100)}%</b></label><input type="range" min="65" max="180" value="${shape.zoom*100}" data-shape-zoom></div>
     </div></div>`;
   }else{
     host.innerHTML=`<div class="advanced-panel"><div class="preset-grid">
@@ -71,28 +69,6 @@ function renderAdvancedPanel(){
     </div></div>`;
   }
 }
-
-function updateEditorOnly(){
-  shape.weaponType=selectedType;
-  drawEditor($("weaponEditor"),shape,selectedPoint,TYPES[selectedType].name);
-  const p=shape.points[selectedPoint]||shape.points[0];
-  document.querySelectorAll("[data-live-value]").forEach(el=>{
-    const key=el.dataset.liveValue;
-    if(key==="pointWidth")el.textContent=Math.round((p.width||1)*100)+"%";
-    else if(key==="pointUpper")el.textContent=Math.round((p.upper||1)*100)+"%";
-    else if(key==="pointLower")el.textContent=Math.round((p.lower||1)*100)+"%";
-    else if(key==="zoom")el.textContent=Math.round(shape.zoom*100)+"%";
-    else if(key in shape)el.textContent=Math.round(Number(shape[key]));
-  });
-}
-function syncShapeForType(type){
-  shapesByType[selectedType]=normalizeShape(shape);
-  selectedType=type;
-  shape=normalizeShape(shapesByType[type]||createWeaponDefault(type));
-  shape.weaponType=type;
-  selectedPoint=0;
-}
-
 function renderBlueprints(){
   $("blueprintCount").textContent=state.blueprints.length;
   $("blueprintList").innerHTML=state.blueprints.map((b,i)=>`<button class="card menu" data-load-blueprint="${i}">
@@ -116,18 +92,7 @@ function saveBlueprint(name=$("blueprintName").value||"無銘の設計図"){
   state.blueprints.unshift({id:String(Date.now()),name,shape:normalizeShape({...shape,weaponType:selectedType})});
   save();toast("設計図を保存しました");
 }
-function loadBlueprint(i){
-  const b=state.blueprints[i];
-  if(!b)return;
-  const loaded=normalizeShape(b.shape);
-  selectedType=loaded.weaponType;
-  shapesByType[selectedType]=loaded;
-  shape=loaded;
-  selectedPoint=0;
-  $("blueprintName").value=b.name;
-  go("forge");
-  toast("設計図を読み込みました");
-}
+function loadBlueprint(i){const b=state.blueprints[i];if(!b)return;shape=normalizeShape(b.shape);selectedType=shape.weaponType;$("blueprintName").value=b.name;go("forge");toast("設計図を読み込みました")}
 function rollRarity(){let r=Math.random()*100,a=0;for(const x of RARITIES){a+=x.probability;if(r<a)return x}return RARITIES.at(-1)}
 function startForge(){if(remaining()<=0)return toast("本日の鍛造回数を使い切りました");if(state.weapons.length>=14)return toast("保管庫が満杯です");forgeCtx={shape:normalizeShape({...shape,weaponType:selectedType}),type:TYPES[selectedType]};forgeStep=0;quality=50;go("process");renderProcess()}
 function renderProcess(){const names=["加熱","鍛打","成形","焼入れ","仕上げ","完成"],texts=["素材を赤熱させます","芯を鍛えます","輪郭を整えます","硬度を定着させます","刃と刻印を仕上げます","最後の一打を入れます"];$("steps").innerHTML=names.map((n,i)=>`<div class="step ${i===forgeStep?"active":""}">${n}</div>`).join("");$("processText").textContent=texts[forgeStep];$("advanceForge").textContent=forgeStep===5?"完成させる":names[forgeStep]+"する";$("processIcon").textContent=forgeStep<1?"🔥":forgeStep<4?forgeCtx.type.icon:"✨";$("quality").textContent=quality}
@@ -139,13 +104,7 @@ function removePoint(){if(shape.points.length<=2)return toast("最低2点必要�
 function smoothPoint(){pushHistory();const p=shape.points[selectedPoint];p.smooth=true;const lenIn=Math.hypot(p.inX,p.inY)||.08,lenOut=Math.hypot(p.outX,p.outY)||.08,angle=Math.atan2(p.outY,p.outX);p.outX=Math.cos(angle)*lenOut;p.outY=Math.sin(angle)*lenOut;p.inX=-Math.cos(angle)*lenIn;p.inY=-Math.sin(angle)*lenIn;render()}
 function cornerPoint(){pushHistory();shape.points[selectedPoint].smooth=false;render()}
 function mirror(){pushHistory();shape.points=shape.points.map(p=>({...p,x:1-p.x,inX:-p.outX,inY:p.outY,outX:-p.inX,outY:p.inY})).sort((a,b)=>a.x-b.x);render()}
-function reset(){
-  pushHistory();
-  shape=createWeaponDefault(selectedType);
-  shapesByType[selectedType]=shape;
-  selectedPoint=0;
-  render();
-}
+function reset(){pushHistory();shape=cloneShape(DEFAULT_SHAPE);shape.weaponType=selectedType;selectedPoint=0;render()}
 
 
 function applyPreset(id){
@@ -200,11 +159,7 @@ function bindEditor(){
 
 document.addEventListener("click",e=>{
   const g=e.target.closest("[data-go]");if(g)go(g.dataset.go);
-  const t=e.target.closest("[data-type]");if(t){
-    pushHistory();
-    syncShapeForType(Number(t.dataset.type));
-    render();
-  }
+  const t=e.target.closest("[data-type]");if(t){selectedType=Number(t.dataset.type);shape.weaponType=selectedType;render();}
   const b=e.target.closest("[data-load-blueprint]");if(b)loadBlueprint(Number(b.dataset.loadBlueprint));
   const w=e.target.closest("[data-weapon]");if(w)showWeapon(state.weapons[Number(w.dataset.weapon)]);
   const tab=e.target.closest("[data-editor-tab]");if(tab){activeEditorTab=tab.dataset.editorTab;document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===tab));renderAdvancedPanel();}
@@ -213,44 +168,12 @@ document.addEventListener("click",e=>{
   if(e.target===$("modal"))$("modal").classList.remove("show");
 });
 document.addEventListener("input",e=>{
-  const k=e.target.dataset?.shape;
-  if(k){
-    shape[k]=Number(e.target.value);
-    updateEditorOnly();
-    return;
-  }
-  const prop=e.target.dataset?.pointProp;
-  if(prop){
-    shape.points[selectedPoint][prop]=Number(e.target.value)/100;
-    updateEditorOnly();
-    return;
-  }
-  const select=e.target.dataset?.shapeSelect;
-  if(select){
-    shape[select]=e.target.value;
-    updateEditorOnly();
-    return;
-  }
-  if(e.target.hasAttribute("data-shape-zoom")){
-    shape.zoom=Number(e.target.value)/100;
-    updateEditorOnly();
-    return;
-  }
-  if(e.target.id==="material"){
-    shape.material=e.target.value;
-    updateEditorOnly();
-    return;
-  }
-  if(e.target.id==="color"){
-    shape.color=e.target.value;
-    updateEditorOnly();
-  }
-});
-document.addEventListener("pointerdown",e=>{
-  if(e.target.matches('input[type="range"]'))pushHistory();
-},{passive:true});
-document.addEventListener("change",e=>{
-  if(e.target.matches('input[type="range"]'))shapesByType[selectedType]=normalizeShape(shape);
+  const k=e.target.dataset?.shape;if(k){pushHistory();shape[k]=Number(e.target.value);render()}
+  const prop=e.target.dataset?.pointProp;if(prop){pushHistory();shape.points[selectedPoint][prop]=Number(e.target.value)/100;render()}
+  const select=e.target.dataset?.shapeSelect;if(select){pushHistory();shape[select]=e.target.value;render()}
+  if(e.target.hasAttribute("data-shape-zoom")){pushHistory();shape.zoom=Number(e.target.value)/100;render()}
+  if(e.target.id==="material"){pushHistory();shape.material=e.target.value;render()}
+  if(e.target.id==="color"){pushHistory();shape.color=e.target.value;render()}
 });
 $("enterButton").onclick=enter;$("undoShape").onclick=undo;$("redoShape").onclick=redo;$("addPoint").onclick=addPoint;$("removePoint").onclick=removePoint;$("smoothPoint").onclick=smoothPoint;$("cornerPoint").onclick=cornerPoint;$("mirrorShape").onclick=mirror;$("duplicatePoint").onclick=duplicateSelectedPoint;$("resetShape").onclick=reset;$("saveBlueprint").onclick=()=>saveBlueprint();$("saveBlueprintFromForge").onclick=()=>saveBlueprint(`${TYPES[selectedType].name}設計図`);$("startForge").onclick=startForge;$("advanceForge").onclick=advanceForge;
 bindEditor();resetDaily();render();

@@ -38,24 +38,6 @@ function ornamentMarkup(shape){
   return "";
 }
 
-
-function weaponTypeOverlay(typeName){
-  if(typeName==="ハンマー"){
-    return `<g><rect x="675" y="112" width="190" height="136" rx="18" fill="url(#metal)" stroke="#f1d08a" stroke-width="3"/><rect x="728" y="148" width="84" height="64" rx="8" fill="#5d6470" opacity=".65"/></g>`;
-  }
-  if(typeName==="斧"){
-    return `<path d="M650 180 Q720 62 880 98 Q818 180 880 262 Q720 298 650 180Z" fill="url(#metal)" stroke="#f1d08a" stroke-width="3"/>`;
-  }
-  if(typeName==="ナックル"){
-    return `<g><path d="M280 215 Q260 125 330 105 Q385 90 420 132 Q455 85 515 105 Q565 125 550 190 L520 245 L300 245Z" fill="url(#metal)" stroke="#f1d08a" stroke-width="3"/>
-      ${[340,405,470].map(x=>`<ellipse cx="${x}" cy="158" rx="26" ry="35" fill="#0b0e14" stroke="#697381" stroke-width="4"/>`).join("")}</g>`;
-  }
-  if(typeName==="双剣"){
-    return `<g opacity=".78" transform="translate(0 76) scale(.82)"><path d="M110 180 L780 150 L900 180 L780 210 Z" fill="url(#metal)" stroke="#f1d08a" stroke-width="2"/></g>`;
-  }
-  return "";
-}
-
 export function drawEditor(svg,shapeInput,selectedIndex=0,typeName=""){
   const shape=normalizeShape(shapeInput);
   const sx=110,sy=55,ux=760,uy=250;
@@ -130,8 +112,7 @@ export function drawEditor(svg,shapeInput,selectedIndex=0,typeName=""){
     ${[1,2,3,4,5,6,7,8,9].map(i=>`<line class="grid-line" x1="${i*100}" y1="0" x2="${i*100}" y2="360"/>`).join("")}
     ${[1,2,3].map(i=>`<line class="grid-line" x1="0" y1="${i*90}" x2="1000" y2="${i*90}"/>`).join("")}
     <g transform="${transform}">
-      <path d="${path}" fill="url(#metal)" stroke="#f1d08a" stroke-width="${1+shape.thickness/35}" filter="url(#weaponGlow)" opacity="${["ハンマー","斧","ナックル"].includes(typeName)?0.15:1}"/>
-      ${weaponTypeOverlay(typeName)}
+      <path d="${path}" fill="url(#metal)" stroke="#f1d08a" stroke-width="${1+shape.thickness/35}" filter="url(#weaponGlow)"/>
       ${holes}${spikes}
       <rect x="5" y="162" width="95" height="36" rx="10" fill="#40292a"/>
       <rect x="90" y="132" width="24" height="96" rx="8" fill="#ad7434"/>
