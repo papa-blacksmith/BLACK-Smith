@@ -1,6 +1,6 @@
 # BLACK Smith
 
-GitHub Pagesで動作するBLACK Smith Ver0.6-dev.3.1です。
+GitHub Pagesで動作するBLACK Smith Ver0.6-dev.4です。
 
 ## 差し替え方法
 
