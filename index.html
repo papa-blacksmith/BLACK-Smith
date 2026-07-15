@@ -5,24 +5,46 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#090a0e">
 <title>BLACK Smith Ver0.5.1</title>
-<link rel="stylesheet" href="./css/style.css">
+<style>
+:root{--bg:#08090d;--panel:#131720;--line:#323947;--text:#f4f5f7;--muted:#9aa4b4;--gold:#e6b85e;--red:#df5b52}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:radial-gradient(circle at 50% -10%,#30231d,#0d1016 38%,#06070a 80%);color:var(--text);font-family:system-ui,-apple-system,"Yu Gothic",sans-serif}
+button,input,select{font:inherit}.screen{display:none;min-height:100dvh;max-width:720px;margin:auto;padding:16px 14px 96px}.screen.active{display:block}
+.title.active{display:flex}.title{flex-direction:column;justify-content:center;text-align:center}
+.logo{font-size:46px;font-weight:950;line-height:.9;letter-spacing:.1em}.logo small{display:block;color:var(--gold);font-size:12px;letter-spacing:.35em;margin-top:15px}
+.mark{width:140px;height:140px;margin:0 auto 24px;border-radius:50%;border:2px solid #705932;background:radial-gradient(circle,#fff0a5 0 2%,#9c4b22 3% 8%,#171a21 9% 42%,#06070a 43%);box-shadow:0 0 70px rgba(230,184,94,.24);position:relative}
+.mark:before,.mark:after{content:"";position:absolute;left:50%;top:50%;width:94px;height:14px;background:#d4d8df;border-radius:4px}.mark:before{transform:translate(-50%,-50%) rotate(45deg)}.mark:after{transform:translate(-50%,-50%) rotate(-45deg)}
+.slogan{font-family:serif;font-size:20px;line-height:1.8;margin:28px 0}.primary,.secondary{width:100%;padding:14px;border-radius:13px;font-weight:900}.primary{border:0;background:linear-gradient(135deg,#f0ca78,#a66a2b);color:#191109}.secondary{background:#1a202a;border:1px solid #3a4352;color:#fff}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.brand{font-weight:950;letter-spacing:.09em}.pill{border:1px solid var(--line);background:#171b24;border-radius:999px;padding:6px 9px;font-size:11px}
+.card{background:linear-gradient(145deg,#191f2a,#10141c);border:1px solid var(--line);border-radius:18px;padding:15px;margin-bottom:12px;box-shadow:0 16px 40px rgba(0,0,0,.28)}
+.hero,.preview{height:235px;display:grid;place-items:center;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 75%,#5c2b16,#1b1716 34%,#10141c 72%);border-radius:16px}.hero:after,.preview:after{content:"";position:absolute;inset:0;background-image:radial-gradient(circle,#ffbb66 0 1px,transparent 2px);background-size:42px 48px;opacity:.2;animation:embers 7s linear infinite}@keyframes embers{to{transform:translateY(-70px)}}
+.bigWeapon{font-size:110px;filter:drop-shadow(0 18px 14px #000);z-index:1;transform:rotate(-12deg)}
+.menu{display:grid;grid-template-columns:42px 1fr auto;gap:10px;align-items:center;text-align:left}.menu span:nth-child(2){display:flex;flex-direction:column}.menu small{color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}.types{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.choice{background:#171c25;border:1px solid #353d4b;color:#fff;border-radius:11px;padding:9px}.choice.active{border-color:var(--gold);color:var(--gold)}
+.control{margin:14px 0}.control label{display:flex;justify-content:space-between;font-size:12px;color:#d4d9e1;margin-bottom:7px}input[type=range]{width:100%;accent-color:#d7a74e}
+.steps{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:10px}.step{text-align:center;padding:7px 2px;border-radius:7px;background:#151922;border:1px solid #2e3542;font-size:9px}.step.active{color:var(--gold);border-color:var(--gold)}
+.weaponGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.weaponCard{background:#151922;border:1px solid #2d3542;border-radius:14px;padding:10px;color:#fff;text-align:left;min-height:145px}.weaponCard .icon{text-align:center;font-size:50px}.badge{display:inline-block;border:1px solid currentColor;border-radius:999px;padding:3px 6px;font-size:9px}
+.explore{padding:13px;border:1px solid #303847;border-radius:12px;background:#151922;margin:8px 0}.explore.active{border-color:var(--gold)}.progress{height:10px;background:#252b35;border-radius:999px;overflow:hidden}.progress i{display:block;height:100%;background:linear-gradient(90deg,#a8652a,#efc972)}
+.nav{display:none;position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(720px,100%);grid-template-columns:repeat(5,1fr);padding:8px 7px calc(8px + env(safe-area-inset-bottom));background:rgba(7,9,13,.96);border-top:1px solid #2b313d}.nav button{border:0;background:none;color:#8791a2;font-size:10px;padding:7px 0}.nav button.active{color:var(--gold)}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.76);align-items:flex-end;justify-content:center;z-index:20}.modal.show{display:flex}.sheet{width:min(720px,100%);max-height:85dvh;overflow:auto;background:#11151d;border:1px solid #343c49;border-radius:22px 22px 0 0;padding:18px 15px}.row{display:flex;justify-content:space-between;border-bottom:1px solid #29303a;padding:8px 0;font-size:12px}
+.toast{position:fixed;left:50%;bottom:92px;transform:translate(-50%,20px);opacity:0;background:#f4f5f7;color:#111;padding:10px 14px;border-radius:999px;font-size:11px;font-weight:800;transition:.2s}.toast.show{opacity:1;transform:translate(-50%,0)}
+@media(min-width:700px){.types{grid-template-columns:repeat(5,1fr)}.weaponGrid{grid-template-columns:repeat(3,1fr)}}
+</style>
 </head>
 <body>
 <div id="app">
 <section id="title" class="screen title active">
- <div class="mark"></div>
- <div class="logo">BLACK<br>SMITH<small>FORGE OF LEGENDS</small></div>
+ <div class="mark"></div><div class="logo">BLACK<br>SMITH<small>FORGE OF LEGENDS</small></div>
  <div class="slogan">魂を打て。<br>世界に一本だけの武器を。</div>
- <button class="primary" data-action="enter">鍛冶場へ入る</button>
+ <button class="primary" onclick="enter()">鍛冶場へ入る</button>
 </section>
 
 <section id="home" class="screen">
  <div class="top"><div class="brand">BLACK Smith</div><div class="pill">鍛造 <b id="remainTop">3/3</b></div></div>
  <div class="card hero"><div class="bigWeapon" id="heroWeapon">⚔️</div></div>
- <button class="primary" data-go="forge">自由鍛造を始める</button>
- <button class="card menu" data-go="blueprint"><span>📜</span><span><b>設計図制作</b><small>形状を自由に保存</small></span><span>›</span></button>
- <button class="card menu" data-go="explore"><span>🧭</span><span><b>探索</b><small>5段階の時間探索</small></span><span>›</span></button>
- <button class="card menu" data-go="collection"><span>✦</span><span><b>特殊背景図鑑</b><small>超低確率の隠し演出</small></span><span>›</span></button>
+ <button class="primary" onclick="go('forge')">自由鍛造を始める</button>
+ <button class="card menu" onclick="go('blueprint')"><span>📜</span><span><b>設計図制作</b><small>形状を自由に保存</small></span><span>›</span></button>
+ <button class="card menu" onclick="go('explore')"><span>🧭</span><span><b>探索</b><small>5段階の時間探索</small></span><span>›</span></button>
+ <button class="card menu" onclick="go('collection')"><span>✦</span><span><b>特殊背景図鑑</b><small>超低確率の隠し演出</small></span><span>›</span></button>
 </section>
 
 <section id="forge" class="screen">
@@ -32,7 +54,7 @@
   <div class="control"><label><span>武器種</span><b id="typeLabel"></b></label><div class="types" id="typeGrid"></div></div>
   <div class="control"><label><span>長さ</span><b id="lengthLabel">60</b></label><input id="lengthRange" type="range" min="20" max="100" value="60"></div>
   <div class="control"><label><span>異形度</span><b id="weirdLabel">25</b></label><input id="weirdRange" type="range" min="0" max="100" value="25"></div>
-  <button class="primary" data-action="start-free-forge">本鍛造へ</button>
+  <button class="primary" onclick="startForge('自由鍛造')">本鍛造へ</button>
  </div>
 </section>
 
@@ -40,9 +62,9 @@
  <div class="top"><div class="brand">設計図制作</div><div class="pill">保存 <b id="bpCount">0</b></div></div>
  <div class="card">
   <div class="preview"><div class="bigWeapon" id="bpPreview">⚔️</div></div>
-  <div class="control"><label><span>設計図名</span></label><input id="bpName" value="無銘の設計図" maxlength="24" class="text-input"></div>
+  <div class="control"><label><span>設計図名</span></label><input id="bpName" value="無銘の設計図" maxlength="24" style="width:100%;padding:11px;border-radius:10px;border:1px solid #343c49;background:#0e1117;color:#fff"></div>
   <div class="control"><label><span>武器種</span><b id="bpTypeLabel"></b></label><div class="types" id="bpTypeGrid"></div></div>
-  <div class="grid2"><button class="secondary" data-action="save-blueprint">設計図保存</button><button class="primary" data-action="start-blueprint-forge">鍛造する</button></div>
+  <div class="grid2"><button class="secondary" onclick="saveBlueprint()">設計図保存</button><button class="primary" onclick="startForge('設計図鍛造')">鍛造する</button></div>
  </div>
  <div id="bpList"></div>
 </section>
@@ -52,14 +74,14 @@
  <div class="steps" id="steps"></div>
  <div class="card">
   <div class="preview"><div class="bigWeapon" id="processIcon">🔥</div></div>
-  <p id="processText" class="center strong"></p>
-  <button class="primary" id="processBtn" data-action="advance-forge"></button>
+  <p id="processText" style="text-align:center;font-weight:800"></p>
+  <button class="primary" id="processBtn" onclick="advanceForge()"></button>
  </div>
 </section>
 
 <section id="inventory" class="screen">
  <div class="top"><div class="brand">武器保管庫</div><div class="pill"><b id="invCount">0</b>/14</div></div>
- <p class="muted small">武器種別9枠＋フリーポケット5枠</p>
+ <p style="color:var(--muted);font-size:12px">武器種別9枠＋フリーポケット5枠</p>
  <div class="weaponGrid" id="inventoryGrid"></div>
 </section>
 
@@ -67,12 +89,8 @@
  <div class="top"><div class="brand">探索</div><div class="pill" id="exploreStatus">待機中</div></div>
  <div class="card">
   <div id="exploreOptions"></div>
-  <button class="primary" id="exploreBtn" data-action="start-explore">探索開始</button>
-  <div id="running" class="hidden">
-   <p id="runningLabel"></p>
-   <div class="progress"><i id="progress"></i></div>
-   <button class="secondary mt12" data-action="claim-explore">帰還確認</button>
-  </div>
+  <button class="primary" id="exploreBtn" onclick="startExplore()">探索開始</button>
+  <div id="running" style="display:none"><p id="runningLabel"></p><div class="progress"><i id="progress"></i></div><button class="secondary" style="margin-top:12px" onclick="claimExplore()">帰還確認</button></div>
  </div>
 </section>
 
@@ -82,16 +100,54 @@
 </section>
 
 <nav class="nav" id="nav">
- <button data-page="home">ホーム</button>
- <button data-page="forge">自由鍛造</button>
- <button data-page="blueprint">設計図</button>
- <button data-page="explore">探索</button>
- <button data-page="inventory">保管庫</button>
+ <button data-page="home" onclick="go('home')">ホーム</button>
+ <button data-page="forge" onclick="go('forge')">自由鍛造</button>
+ <button data-page="blueprint" onclick="go('blueprint')">設計図</button>
+ <button data-page="explore" onclick="go('explore')">探索</button>
+ <button data-page="inventory" onclick="go('inventory')">保管庫</button>
 </nav>
 
-<div id="modal" class="modal"><div class="sheet" id="sheet"></div></div>
+<div id="modal" class="modal" onclick="if(event.target===this)this.classList.remove('show')"><div class="sheet" id="sheet"></div></div>
 <div id="toast" class="toast"></div>
 </div>
-<script type="module" src="./js/main.js"></script>
+
+<script>
+const TYPES=[['片手剣','⚔️'],['大剣','🗡️'],['刀','🗡'],['双剣','⚔️⚔️'],['槍','🔱'],['斧','🪓'],['ハンマー','🔨'],['ダガー','🔪'],['ナックル','🥊']].map(([name,icon])=>({name,icon}));
+const R=[{name:'成長型等級コモン',p:.002,color:'#8fffe6',m:1.2},{name:'BLACK Smith',p:.048,color:'#ff665e',m:3.2},{name:'LEGEND',p:.45,color:'#ff9b54',m:2.2},{name:'EPIC',p:3.5,color:'#c08cff',m:1.75},{name:'RARE',p:16,color:'#6ba9ff',m:1.4},{name:'UNCOMMON',p:30,color:'#72d39a',m:1.15},{name:'COMMON',p:50,color:'#bdc3ce',m:1}];
+const DIFF=[['下級',30000,3,6],['中級',60000,6,12],['上級',180000,12,22],['最上級',480000,22,38],['？？？',900000,35,60]];
+const BGS=[['虚無の炉',.2],['竜骸の祭壇',.08],['黒蝕の日輪',.025],['始原の金床',.005]];
+const DEF={used:0,day:'',weapons:[],blueprints:[],backgrounds:[],explore:null,rank:'F'};
+let state=load(),sel=0,bpsel=0,ctx=null,step=0,quality=50,diff=0;
+function load(){try{return Object.assign({},DEF,JSON.parse(localStorage.getItem('bs051')||'{}'))}catch(e){return {...DEF}}}
+function save(){localStorage.setItem('bs051',JSON.stringify(state));render()}
+function key(){let d=new Date();if(d.getHours()<5)d.setDate(d.getDate()-1);return d.toISOString().slice(0,10)}
+function reset(){let k=key();if(state.day!==k){state.day=k;state.used=0;save()}}
+function max(){return 3+(state.rank==='SS'||state.rank==='SSS'||state.rank==='BLACK Smith'?1:0)+(state.rank==='BLACK Smith'?1:0)}
+function left(){return Math.max(0,max()-state.used)}
+function enter(){nav.style.display='grid';go('home')}
+function go(id){reset();document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===id));render();scrollTo(0,0)}
+function rr(){let x=Math.random()*100,a=0;for(const r of R){a+=r.p;if(x<a)return r}return R.at(-1)}
+function skill(type){let x=Math.random()*100;if(x>=5)return {tier:'ノースキル'};let atk=x<.5?rand(100,150):x<1?rand(80,150):rand(10,150),agi=x<.5?rand(20,50):0,active=null;if(x<.5&&Math.random()<.5){let p=['ソウルインジェクション','神殺し'];let s={'ナックル':'ヴェノムスプラッシュ','ハンマー':'グラビティプレス','斧':'グラビティプレス','大剣':'レイジングスラッシュ','双剣':'シャドウスタブ','ダガー':'シャドウスタブ','槍':'スパイラルランス'}[type];if(s)p.push(s);active=p[rand(0,p.length-1)]}return {tier:x<.01?'神域':x<.5?'超希少':x<1?'希少':'付与',atk,agi,active}}
+function mods(name){let curse=['F','E','D','C','B'].includes(state.rank)&&Math.random()<.05,trans=Math.random()<.01;return {name:(trans?'超越した':'')+(curse?'呪われた':'')+name,curse,trans}}
+function bg(){let x=Math.random()*100,a=0;for(const b of BGS){a+=b[1];if(x<a)return b[0]}return null}
+function create(type,source){let r=rr(),m=mods(['黒鉄','灼熱','蒼雷','月影','星喰','歪曲'][rand(0,5)]+'の'+type.name),s=skill(type.name),b=bg(),pen=m.curse?.8:1,boost=m.trans?1.1:1;if(b&&!state.backgrounds.includes(b))state.backgrounds.push(b);return {id:String(Date.now()+Math.random()),name:m.name,type:type.name,icon:type.icon,rarity:r.name,color:r.color,attack:Math.round(rand(80,150)*r.m*pen*boost),agility:Math.round(rand(20,60)*pen*boost),skill:s,background:b,source,code:'BS-'+Math.random().toString(36).slice(2,6).toUpperCase()+'-'+Math.random().toString(36).slice(2,8).toUpperCase()}}
+function renderTypes(){typeGrid.innerHTML=TYPES.map((t,i)=>`<button class="choice ${i===sel?'active':''}" onclick="sel=${i};renderTypes();updatePreview()">${t.icon}<br><small>${t.name}</small></button>`).join('');bpTypeGrid.innerHTML=TYPES.map((t,i)=>`<button class="choice ${i===bpsel?'active':''}" onclick="bpsel=${i};renderTypes();updatePreview()">${t.icon}<br><small>${t.name}</small></button>`).join('');typeLabel.textContent=TYPES[sel].name;bpTypeLabel.textContent=TYPES[bpsel].name}
+function updatePreview(){lengthLabel.textContent=lengthRange.value;weirdLabel.textContent=weirdRange.value;forgePreview.textContent=TYPES[sel].icon;forgePreview.style.transform=`rotate(${(+weirdRange.value-50)/5}deg) scale(${.75+(+lengthRange.value/170)})`;bpPreview.textContent=TYPES[bpsel].icon}
+function saveBlueprint(){state.blueprints.unshift({name:bpName.value||'無銘の設計図',type:bpsel});save();toastMsg('設計図を保存しました')}
+function startForge(source){if(left()<=0)return toastMsg('本日の鍛造回数を使い切りました');if(state.weapons.length>=14)return toastMsg('保管庫が満杯です');ctx={source,type:source==='設計図鍛造'?bpsel:sel};step=0;quality=50;go('process')}
+const SN=['加熱','鍛打','成形','焼入れ','仕上げ','完成'];
+function renderProcess(){steps.innerHTML=SN.map((s,i)=>`<div class="step ${i===step?'active':''}">${s}</div>`).join('');processText.textContent=['素材を赤熱させます','芯を鍛えます','輪郭を整えます','硬度を定着させます','刃と刻印を仕上げます','最後の一打を入れます'][step];processBtn.textContent=step===5?'完成させる':SN[step]+'する';processIcon.textContent=step<1?'🔥':step<4?TYPES[ctx.type].icon:'✨';qualityEl().textContent=quality}
+function qualityEl(){return document.getElementById('quality')}
+function advanceForge(){quality=Math.min(100,quality+rand(4,11));if(step<5){step++;renderProcess()}else finish()}
+function finish(){let w=create(TYPES[ctx.type],ctx.source);w.quality=quality;state.weapons.unshift(w);state.used++;save();showWeapon(w)}
+function showWeapon(w){sheet.innerHTML=`<h3 style="text-align:center">鍛造完了</h3><div class="preview"><div class="bigWeapon">${w.icon}</div></div><div style="text-align:center"><span class="badge" style="color:${w.color}">${w.rarity}</span><h2>${w.name}</h2>${w.background?`<p style="color:#d9a8ff">特殊背景：${w.background}</p>`:''}</div><div class="row"><span>攻撃力</span><b>${w.attack}</b></div><div class="row"><span>俊敏</span><b>${w.agility}</b></div><div class="row"><span>スキル</span><b>${w.skill.tier}</b></div>${w.skill.atk?`<div class="row"><span>攻撃補正</span><b>+${w.skill.atk}%</b></div>`:''}${w.skill.agi?`<div class="row"><span>俊敏補正</span><b>+${w.skill.agi}%</b></div>`:''}${w.skill.active?`<div class="row"><span>アクティブ</span><b>${w.skill.active}</b></div>`:''}<button class="primary" style="margin-top:12px" onclick="modal.classList.remove('show');go('inventory')">保管庫へ</button>`;modal.classList.add('show')}
+function renderInventory(){invCount.textContent=state.weapons.length;inventoryGrid.innerHTML=state.weapons.map(w=>`<button class="weaponCard" onclick='showWeapon(${JSON.stringify(w)})'><span class="badge" style="color:${w.color}">${w.rarity}</span><div class="icon">${w.icon}</div><b>${w.name}</b><small style="color:var(--muted)">${w.type}</small></button>`).join('')||'<div style="color:var(--muted)">まだ武器がありません</div>'}
+function renderExplore(){exploreOptions.innerHTML=DIFF.map((d,i)=>`<div class="explore ${i===diff?'active':''}" onclick="diff=${i};renderExplore()"><b>${d[0]}</b><span style="float:right">${Math.round(d[1]/60000*10)/10}分</span></div>`).join('');if(state.explore){exploreOptions.style.display='none';exploreBtn.style.display='none';running.style.display='block';let now=Date.now(),done=now>=state.explore.end,left=Math.max(0,state.explore.end-now),total=state.explore.end-state.explore.start;runningLabel.textContent=done?'探索から帰還しました':`残り ${Math.ceil(left/1000)}秒`;progress.style.width=(done?100:(1-left/total)*100)+'%';exploreStatus.textContent=done?'帰還済み':'探索中'}else{exploreOptions.style.display='block';exploreBtn.style.display='block';running.style.display='none';exploreStatus.textContent='待機中'}}
+function startExplore(){if(state.explore)return;let d=DIFF[diff],n=Date.now();state.explore={start:n,end:n+d[1],min:d[2],max:d[3]};save()}
+function claimExplore(){if(!state.explore||Date.now()<state.explore.end)return toastMsg('まだ探索中です');let n=rand(state.explore.min,state.explore.max);state.explore=null;save();toastMsg(`鉱石を${n}個獲得しました`)}
+function render(){remainTop.textContent=`${left()}/${max()}`;remainForge.textContent=`${left()}/${max()}`;heroWeapon.textContent=state.weapons[0]?.icon||'⚔️';bpCount.textContent=state.blueprints.length;bpList.innerHTML=state.blueprints.map(b=>`<div class="card"><b>${b.name}</b><small style="color:var(--muted)"> ${TYPES[b.type].name}</small></div>`).join('');bgCount.textContent=state.backgrounds.length;bgGrid.innerHTML=BGS.map(b=>`<div class="weaponCard"><b>${state.backgrounds.includes(b[0])?b[0]:'？？？？'}</b></div>`).join('');renderTypes();updatePreview();renderInventory();renderExplore();if(document.getElementById('process').classList.contains('active'))renderProcess()}
+function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a}function toastMsg(s){toast.textContent=s;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1700)}
+lengthRange.oninput=updatePreview;weirdRange.oninput=updatePreview;setInterval(()=>{if(document.getElementById('explore').classList.contains('active'))renderExplore()},1000);reset();render();
+</script>
 </body>
 </html>
