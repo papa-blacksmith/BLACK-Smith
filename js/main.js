@@ -4,24 +4,18 @@ import { DEFAULT_SHAPE, cloneShape, normalizeShape, fingerprint, createWeaponDef
 import { drawEditor, eventToLocal } from "./features/editor.js";
 
 const $=id=>document.getElementById(id);
-<<<<<<< HEAD
-<<<<<<< HEAD
 let state=loadState(),selectedType=0,selectedPoint=0;
 let shapesByType=Array.from({length:9},(_,i)=>createWeaponDefault(i));
 let shape=shapesByType[0];
 let dragIndex=null,dragHandle=null,dragWidth=false,forgeCtx=null,forgeStep=0,quality=50;
 let activeEditorTab="shape";
 let undoStack=[],redoStack=[];
-=======
-let state=loadState(),shape=cloneShape(DEFAULT_SHAPE),selectedType=0,selectedPoint=0;
-let dragIndex=null,dragHandle=null,forgeCtx=null,forgeStep=0,quality=50;
->>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
-=======
-let state=loadState(),shape=cloneShape(DEFAULT_SHAPE),selectedType=0,selectedPoint=0;
-let dragIndex=null,dragHandle=null,forgeCtx=null,forgeStep=0,quality=50;
->>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
 
 const toast=msg=>{const el=$("toast");el.textContent=msg;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),1600)};
+const snapshot=()=>JSON.stringify(normalizeShape(shape));
+function pushHistory(){const s=snapshot();if(undoStack.at(-1)!==s)undoStack.push(s);if(undoStack.length>60)undoStack.shift();redoStack=[];}
+function undo(){if(!undoStack.length)return toast("戻せる操作がありません");redoStack.push(snapshot());shape=normalizeShape(JSON.parse(undoStack.pop()));render();}
+function redo(){if(!redoStack.length)return toast("進める操作がありません");undoStack.push(snapshot());shape=normalizeShape(JSON.parse(redoStack.pop()));render();}
 const dayKey=()=>{const d=new Date();if(d.getHours()<5)d.setDate(d.getDate()-1);return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`};
 const maxForges=()=>3;
 const remaining=()=>Math.max(0,maxForges()-state.used);
@@ -34,14 +28,12 @@ function renderTypes(){
   $("weaponTypes").innerHTML=TYPES.map((t,i)=>`<button class="type-button ${i===selectedType?"active":""}" data-type="${i}">${t.icon}<br><small>${t.name}</small></button>`).join("");
 }
 function renderControls(){
-  const controls=[["width","幅",10,100],["thickness","厚み",5,100],["tip","刃先",0,100],["curve","反り",0,100]];
+  const controls=[["width","全体幅",10,100],["thickness","厚み",5,100],["tip","刃先",0,100],["curve","反り",0,100]];
   $("shapeControls").innerHTML=`<div class="shape-grid">${controls.map(([k,l,min,max])=>`
     <div class="shape-control"><label><span>${l}</span><b data-live-value="${k}">${Math.round(shape[k])}</b></label>
     <input type="range" min="${min}" max="${max}" value="${shape[k]}" data-shape="${k}"></div>`).join("")}</div>
     <div class="material-row"><select id="material">${["黒鉄","鋼","炎鋼","氷晶鋼","雷鋼","ミスリル"].map(m=>`<option ${shape.material===m?"selected":""}>${m}</option>`).join("")}</select>
     <input id="color" type="color" value="${shape.color}"></div>`;
-<<<<<<< HEAD
-<<<<<<< HEAD
   renderAdvancedPanel();
 }
 
@@ -78,10 +70,6 @@ function renderAdvancedPanel(){
       ${[["straight","直剣"],["katana","刀"],["scythe","鎌"],["flame","炎刃"],["jagged","魔剣"],["spear","槍刃"]].map(([id,label])=>`<button class="preset-button" data-preset="${id}">${label}</button>`).join("")}
     </div></div>`;
   }
-=======
->>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
-=======
->>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
 }
 
 function updateEditorOnly(){
@@ -146,8 +134,6 @@ function renderProcess(){const names=["加熱","鍛打","成形","焼入れ","�
 function advanceForge(){quality=Math.min(100,quality+Math.floor(Math.random()*8)+4);if(forgeStep<5){forgeStep++;renderProcess();return}const rarity=rollRarity();const w={id:String(Date.now()),name:["黒鉄","灼熱","蒼雷","月影"][Math.floor(Math.random()*4)]+"の"+forgeCtx.type.name,type:forgeCtx.type.name,icon:forgeCtx.type.icon,rarity:rarity.name,color:rarity.color,attack:Math.round((80+Math.random()*70)*rarity.multiplier),quality,shape:forgeCtx.shape,shapeId:fingerprint(forgeCtx.shape)};state.weapons.unshift(w);state.used++;save();showWeapon(w)}
 function showWeapon(w){$("modalSheet").innerHTML=`<h2>${w.name}</h2><div class="process-view">${w.icon}</div><div class="row"><span>レアリティ</span><b style="color:${w.color}">${w.rarity}</b></div><div class="row"><span>攻撃力</span><b>${w.attack}</b></div><div class="row"><span>品質</span><b>${w.quality}</b></div><div class="row"><span>形状ID</span><b>${w.shapeId}</b></div><button class="primary mt12" id="closeModal">閉じる</button>`;$("modal").classList.add("show");$("closeModal").onclick=()=>$("modal").classList.remove("show")}
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 function addPoint(){if(shape.points.length>=12)return toast("最大12点です");pushHistory();const p=[...shape.points].sort((a,b)=>a.x-b.x);let idx=0,gap=-1;for(let i=0;i<p.length-1;i++){const g=p[i+1].x-p[i].x;if(g>gap){gap=g;idx=i}}const a=p[idx],b=p[idx+1];p.splice(idx+1,0,{x:(a.x+b.x)/2,y:(a.y+b.y)/2,inX:-.05,inY:0,outX:.05,outY:0,smooth:true});shape.points=p;selectedPoint=idx+1;render()}
 function removePoint(){if(shape.points.length<=2)return toast("最低2点必要です");pushHistory();shape.points.splice(selectedPoint,1);selectedPoint=Math.max(0,Math.min(selectedPoint,shape.points.length-1));render()}
 function smoothPoint(){pushHistory();const p=shape.points[selectedPoint];p.smooth=true;const lenIn=Math.hypot(p.inX,p.inY)||.08,lenOut=Math.hypot(p.outX,p.outY)||.08,angle=Math.atan2(p.outY,p.outX);p.outX=Math.cos(angle)*lenOut;p.outY=Math.sin(angle)*lenOut;p.inX=-Math.cos(angle)*lenIn;p.inY=-Math.sin(angle)*lenIn;render()}
@@ -160,30 +146,47 @@ function reset(){
   selectedPoint=0;
   render();
 }
-=======
-=======
->>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
-function addPoint(){if(shape.points.length>=12)return toast("最大12点です");const p=[...shape.points].sort((a,b)=>a.x-b.x);let idx=0,gap=-1;for(let i=0;i<p.length-1;i++){const g=p[i+1].x-p[i].x;if(g>gap){gap=g;idx=i}}const a=p[idx],b=p[idx+1];p.splice(idx+1,0,{x:(a.x+b.x)/2,y:(a.y+b.y)/2,inX:-.05,inY:0,outX:.05,outY:0,smooth:true});shape.points=p;selectedPoint=idx+1;render()}
-function removePoint(){if(shape.points.length<=2)return toast("最低2点必要です");shape.points.splice(selectedPoint,1);selectedPoint=Math.max(0,Math.min(selectedPoint,shape.points.length-1));render()}
-function smoothPoint(){const p=shape.points[selectedPoint];p.smooth=true;const lenIn=Math.hypot(p.inX,p.inY)||.08,lenOut=Math.hypot(p.outX,p.outY)||.08,angle=Math.atan2(p.outY,p.outX);p.outX=Math.cos(angle)*lenOut;p.outY=Math.sin(angle)*lenOut;p.inX=-Math.cos(angle)*lenIn;p.inY=-Math.sin(angle)*lenIn;render()}
-function cornerPoint(){shape.points[selectedPoint].smooth=false;render()}
-function mirror(){shape.points=shape.points.map(p=>({...p,x:1-p.x,inX:-p.outX,inY:p.outY,outX:-p.inX,outY:p.inY})).sort((a,b)=>a.x-b.x);render()}
-function reset(){shape=cloneShape(DEFAULT_SHAPE);shape.weaponType=selectedType;selectedPoint=0;render()}
-<<<<<<< HEAD
->>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
-=======
->>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
 
+
+function applyPreset(id){
+  pushHistory();
+  const presets={
+    straight:{points:[{x:.08,y:.5,inX:-.04,inY:0,outX:.08,outY:0,smooth:true,width:1,upper:1,lower:1},{x:.4,y:.5,inX:-.08,inY:0,outX:.08,outY:0,smooth:true,width:1,upper:1,lower:1},{x:.72,y:.5,inX:-.08,inY:0,outX:.08,outY:0,smooth:true,width:.75,upper:1,lower:1},{x:.93,y:.5,inX:-.05,inY:0,outX:.03,outY:0,smooth:true,width:.25,upper:1,lower:1}],tip:75,edgeStyle:"normal"},
+    katana:{points:[{x:.08,y:.62,inX:-.05,inY:0,outX:.12,outY:-.08,smooth:true,width:1,upper:1,lower:1},{x:.38,y:.48,inX:-.1,inY:.06,outX:.1,outY:-.05,smooth:true,width:.9,upper:.8,lower:1.2},{x:.7,y:.4,inX:-.1,inY:.03,outX:.1,outY:0,smooth:true,width:.65,upper:.7,lower:1.25},{x:.93,y:.43,inX:-.06,inY:-.01,outX:.03,outY:0,smooth:true,width:.22,upper:.5,lower:1.3}],tip:80,asymmetric:true},
+    scythe:{points:[{x:.08,y:.72,inX:-.03,inY:0,outX:.1,outY:-.18,smooth:true,width:.9,upper:1,lower:1},{x:.35,y:.35,inX:-.1,inY:.14,outX:.1,outY:-.12,smooth:true,width:1.2,upper:1,lower:1},{x:.68,y:.2,inX:-.1,inY:.08,outX:.12,outY:.02,smooth:true,width:.7,upper:1.2,lower:.8},{x:.9,y:.35,inX:-.08,inY:-.06,outX:.03,outY:0,smooth:true,width:.15,upper:1,lower:1}],tip:90},
+    flame:{points:[{x:.08,y:.55,inX:-.03,inY:0,outX:.08,outY:-.12,smooth:false,width:1,upper:1.3,lower:.9},{x:.28,y:.35,inX:-.06,inY:.1,outX:.07,outY:.1,smooth:false,width:1.3,upper:1.5,lower:.8},{x:.48,y:.62,inX:-.06,inY:-.1,outX:.07,outY:-.12,smooth:false,width:1.1,upper:1.4,lower:.8},{x:.7,y:.32,inX:-.06,inY:.12,outX:.08,outY:.1,smooth:false,width:.8,upper:1.5,lower:.7},{x:.92,y:.52,inX:-.05,inY:-.08,outX:.03,outY:0,smooth:false,width:.2,upper:1,lower:1}],tip:88,asymmetric:true,glow:55},
+    jagged:{points:[{x:.08,y:.5,inX:-.03,inY:0,outX:.06,outY:-.05,smooth:false,width:1,upper:1.4,lower:1},{x:.3,y:.38,inX:-.05,inY:.06,outX:.05,outY:.08,smooth:false,width:1.3,upper:1.5,lower:.8},{x:.5,y:.58,inX:-.05,inY:-.08,outX:.05,outY:-.1,smooth:false,width:1.1,upper:1.6,lower:.8},{x:.72,y:.34,inX:-.05,inY:.1,outX:.06,outY:.06,smooth:false,width:.75,upper:1.6,lower:.7},{x:.93,y:.5,inX:-.04,inY:-.05,outX:.02,outY:0,smooth:false,width:.18,upper:1,lower:1}],edgeStyle:"serrated",serration:70,spikes:4},
+    spear:{points:[{x:.08,y:.5,inX:-.03,inY:0,outX:.1,outY:0,smooth:true,width:.35,upper:1,lower:1},{x:.5,y:.5,inX:-.1,inY:0,outX:.1,outY:0,smooth:true,width:.55,upper:1,lower:1},{x:.78,y:.5,inX:-.08,inY:0,outX:.08,outY:0,smooth:true,width:1.25,upper:1,lower:1},{x:.94,y:.5,inX:-.05,inY:0,outX:.02,outY:0,smooth:true,width:.1,upper:1,lower:1}],tip:100}
+  };
+  const preset=presets[id];if(!preset)return;
+  shape=normalizeShape({...shape,...preset,points:preset.points});
+  selectedPoint=0;render();toast("プリセットを適用しました");
+}
+
+function duplicateSelectedPoint(){
+  if(shape.points.length>=12)return toast("最大12点です");
+  pushHistory();
+  const p=shape.points[selectedPoint];
+  const copy={...p,x:Math.min(.98,p.x+.035),y:Math.min(.95,p.y+.02)};
+  shape.points.splice(selectedPoint+1,0,copy);
+  shape.points.sort((a,b)=>a.x-b.x);
+  selectedPoint=shape.points.indexOf(copy);
+  render();
+}
 function bindEditor(){
   const svg=$("weaponEditor");
   svg.addEventListener("pointerdown",e=>{
-    const h=e.target.closest("[data-handle]"),a=e.target.closest(".anchor"),t=h||a;if(!t)return;
-    dragIndex=Number(t.dataset.index);selectedPoint=dragIndex;dragHandle=h?.dataset.handle||null;svg.setPointerCapture?.(e.pointerId);render();e.preventDefault();
+    const h=e.target.closest("[data-handle]"),a=e.target.closest(".anchor"),w=e.target.closest("[data-width-index]"),t=h||a||w;if(!t)return;
+    pushHistory();
+    dragIndex=Number(t.dataset.index??t.dataset.widthIndex);selectedPoint=dragIndex;dragHandle=h?.dataset.handle||null;dragWidth=Boolean(w);svg.setPointerCapture?.(e.pointerId);render();e.preventDefault();
   });
   svg.addEventListener("pointermove",e=>{
     if(dragIndex===null)return;
     const local=eventToLocal(svg,e),p=shape.points[dragIndex];if(!p)return;
-    if(dragHandle){
+    if(dragWidth){
+      const anchorY=55+p.y*250;
+      p.width=Math.max(.15,Math.min(2.2,(anchorY-local.y)/34));
+    }else if(dragHandle){
       const hx=Math.max(-.35,Math.min(.35,(local.x-110)/760-p.x)),hy=Math.max(-.35,Math.min(.35,(local.y-55)/250-p.y));
       p[dragHandle+"X"]=hx;p[dragHandle+"Y"]=hy;
       if(p.smooth){const o=dragHandle==="in"?"out":"in",ol=Math.hypot(p[o+"X"],p[o+"Y"])||Math.hypot(hx,hy),l=Math.hypot(hx,hy)||1;p[o+"X"]=-hx/l*ol;p[o+"Y"]=-hy/l*ol;}
@@ -192,7 +195,7 @@ function bindEditor(){
     }
     drawEditor(svg,shape,selectedPoint,TYPES[selectedType].name);e.preventDefault();
   });
-  const stop=()=>{dragIndex=null;dragHandle=null};svg.addEventListener("pointerup",stop);svg.addEventListener("pointercancel",stop);
+  const stop=()=>{dragIndex=null;dragHandle=null;dragWidth=false};svg.addEventListener("pointerup",stop);svg.addEventListener("pointercancel",stop);
 }
 
 document.addEventListener("click",e=>{
@@ -204,10 +207,11 @@ document.addEventListener("click",e=>{
   }
   const b=e.target.closest("[data-load-blueprint]");if(b)loadBlueprint(Number(b.dataset.loadBlueprint));
   const w=e.target.closest("[data-weapon]");if(w)showWeapon(state.weapons[Number(w.dataset.weapon)]);
+  const tab=e.target.closest("[data-editor-tab]");if(tab){activeEditorTab=tab.dataset.editorTab;document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===tab));renderAdvancedPanel();}
+  const preset=e.target.closest("[data-preset]");if(preset)applyPreset(preset.dataset.preset);
+  const asym=e.target.closest("[data-toggle-asymmetry]");if(asym){pushHistory();shape.asymmetric=!shape.asymmetric;render();}
   if(e.target===$("modal"))$("modal").classList.remove("show");
 });
-<<<<<<< HEAD
-<<<<<<< HEAD
 document.addEventListener("input",e=>{
   const k=e.target.dataset?.shape;
   if(k){
@@ -249,12 +253,4 @@ document.addEventListener("change",e=>{
   if(e.target.matches('input[type="range"]'))shapesByType[selectedType]=normalizeShape(shape);
 });
 $("enterButton").onclick=enter;$("undoShape").onclick=undo;$("redoShape").onclick=redo;$("addPoint").onclick=addPoint;$("removePoint").onclick=removePoint;$("smoothPoint").onclick=smoothPoint;$("cornerPoint").onclick=cornerPoint;$("mirrorShape").onclick=mirror;$("duplicatePoint").onclick=duplicateSelectedPoint;$("resetShape").onclick=reset;$("saveBlueprint").onclick=()=>saveBlueprint();$("saveBlueprintFromForge").onclick=()=>saveBlueprint(`${TYPES[selectedType].name}設計図`);$("startForge").onclick=startForge;$("advanceForge").onclick=advanceForge;
-=======
-document.addEventListener("input",e=>{const k=e.target.dataset?.shape;if(k){shape[k]=Number(e.target.value);render()}if(e.target.id==="material"){shape.material=e.target.value;render()}if(e.target.id==="color"){shape.color=e.target.value;render()}});
-$("enterButton").onclick=enter;$("addPoint").onclick=addPoint;$("removePoint").onclick=removePoint;$("smoothPoint").onclick=smoothPoint;$("cornerPoint").onclick=cornerPoint;$("mirrorShape").onclick=mirror;$("resetShape").onclick=reset;$("saveBlueprint").onclick=()=>saveBlueprint();$("saveBlueprintFromForge").onclick=()=>saveBlueprint(`${TYPES[selectedType].name}設計図`);$("startForge").onclick=startForge;$("advanceForge").onclick=advanceForge;
->>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
-=======
-document.addEventListener("input",e=>{const k=e.target.dataset?.shape;if(k){shape[k]=Number(e.target.value);render()}if(e.target.id==="material"){shape.material=e.target.value;render()}if(e.target.id==="color"){shape.color=e.target.value;render()}});
-$("enterButton").onclick=enter;$("addPoint").onclick=addPoint;$("removePoint").onclick=removePoint;$("smoothPoint").onclick=smoothPoint;$("cornerPoint").onclick=cornerPoint;$("mirrorShape").onclick=mirror;$("resetShape").onclick=reset;$("saveBlueprint").onclick=()=>saveBlueprint();$("saveBlueprintFromForge").onclick=()=>saveBlueprint(`${TYPES[selectedType].name}設計図`);$("startForge").onclick=startForge;$("advanceForge").onclick=advanceForge;
->>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
 bindEditor();resetDaily();render();

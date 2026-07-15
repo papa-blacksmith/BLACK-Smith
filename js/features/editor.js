@@ -8,8 +8,6 @@ function cubic(p0,p1,p2,p3,t){
   };
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 function interpolateWidth(points,t){
   if(points.length===1)return points[0].width||1;
   const scaled=t*(points.length-1);
@@ -58,51 +56,79 @@ function weaponTypeOverlay(typeName){
   return "";
 }
 
-=======
->>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
-=======
->>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
 export function drawEditor(svg,shapeInput,selectedIndex=0,typeName=""){
   const shape=normalizeShape(shapeInput);
   const sx=110,sy=55,ux=760,uy=250;
   const anchors=shape.points.map((p,index)=>({
     index,x:sx+p.x*ux,y:sy+p.y*uy,
     inX:sx+(p.x+p.inX)*ux,inY:sy+(p.y+p.inY)*uy,
-    outX:sx+(p.x+p.outX)*ux,outY:sy+(p.y+p.outY)*uy
+    outX:sx+(p.x+p.outX)*ux,outY:sy+(p.y+p.outY)*uy,
+    width:p.width,upper:p.upper,lower:p.lower
   }));
   const samples=[];
+  const sampleMeta=[];
   for(let i=0;i<anchors.length-1;i++){
     const a=anchors[i],b=anchors[i+1];
-    for(let s=0;s<20;s++)samples.push(cubic(
-      {x:a.x,y:a.y},{x:a.outX,y:a.outY},{x:b.inX,y:b.inY},{x:b.x,y:b.y},s/20
-    ));
+    for(let s=0;s<24;s++){
+      const t=s/24;
+      samples.push(cubic({x:a.x,y:a.y},{x:a.outX,y:a.outY},{x:b.inX,y:b.inY},{x:b.x,y:b.y},t));
+      sampleMeta.push((i+t)/(anchors.length-1));
+    }
   }
   samples.push({x:anchors.at(-1).x,y:anchors.at(-1).y});
+  sampleMeta.push(1);
+
   const base=24+shape.width*.72,top=[],bottom=[];
   samples.forEach((p,i)=>{
     const before=samples[Math.max(0,i-1)],after=samples[Math.min(samples.length-1,i+1)];
     const dx=after.x-before.x,dy=after.y-before.y,len=Math.hypot(dx,dy)||1;
     const nx=-dy/len,ny=dx/len;
+    const local=interpolateWidth(shape.points,sampleMeta[i]);
     const taper=1-(i/Math.max(1,samples.length-1))*Math.min(.65,shape.tip/140);
-    const half=Math.max(3,base*taper/2);
-    top.push({x:p.x+nx*half,y:p.y+ny*half});
-    bottom.push({x:p.x-nx*half,y:p.y-ny*half});
+    let upper=base*taper*.5*local.width*local.upper;
+    let lower=base*taper*.5*local.width*local.lower;
+    if(!shape.asymmetric){const avg=(upper+lower)/2;upper=avg;lower=avg;}
+    if(shape.edgeStyle==="serrated" && i%5===0)upper+=shape.serration*.16;
+    if(shape.edgeStyle==="broken" && i%11===0)upper*=.55;
+    if(shape.edgeStyle==="double"){upper*=.88;lower*=.88;}
+    top.push({x:p.x+nx*upper,y:p.y+ny*upper});
+    bottom.push({x:p.x-nx*lower,y:p.y-ny*lower});
   });
+
   const last=samples.at(-1),prev=samples.at(-2)||last;
   const dx=last.x-prev.x,dy=last.y-prev.y,len=Math.hypot(dx,dy)||1;
   const tip={x:last.x+dx/len*(22+shape.tip*.65),y:last.y+dy/len*(22+shape.tip*.65)};
   const path=[`M ${top[0].x} ${top[0].y}`,...top.slice(1).map(p=>`L ${p.x} ${p.y}`),
     `L ${tip.x} ${tip.y}`,...bottom.reverse().map(p=>`L ${p.x} ${p.y}`),"Z"].join(" ");
 
+  const zoom=shape.zoom||1;
+  const transform=`translate(${500*(1-zoom)} ${180*(1-zoom)}) scale(${zoom})`;
+
+  const holes=Array.from({length:shape.holes},(_,i)=>{
+    const index=Math.floor((samples.length-1)*(0.25+(i+1)/(shape.holes+2)*.55));
+    const p=samples[index];
+    const radius=7+shape.width*.06;
+    return `<ellipse class="hole-shape" cx="${p.x}" cy="${p.y}" rx="${radius*1.4}" ry="${radius}"/>`;
+  }).join("");
+
+  const spikes=Array.from({length:shape.spikes},(_,i)=>{
+    const index=Math.floor((top.length-1)*(0.18+(i+1)/(shape.spikes+1)*.68));
+    const p=top[index],center=samples[index];
+    const vx=p.x-center.x,vy=p.y-center.y,l=Math.hypot(vx,vy)||1;
+    const nx=vx/l,ny=vy/l,size=12+shape.serration*.18;
+    return `<polygon class="spike-shape" points="${p.x-ny*5},${p.y+nx*5} ${p.x+nx*size},${p.y+ny*size} ${p.x+ny*5},${p.y-nx*5}"/>`;
+  }).join("");
+
   svg.innerHTML=`
-    <defs><linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="${shape.color}"/>
-      <stop offset=".7" stop-color="#6d7380"/><stop offset="1" stop-color="#232832"/>
-    </linearGradient></defs>
+    <defs>
+      <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="${shape.color}"/>
+        <stop offset=".7" stop-color="#6d7380"/><stop offset="1" stop-color="#232832"/>
+      </linearGradient>
+      <filter id="weaponGlow"><feGaussianBlur stdDeviation="${shape.glow/15}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
     ${[1,2,3,4,5,6,7,8,9].map(i=>`<line class="grid-line" x1="${i*100}" y1="0" x2="${i*100}" y2="360"/>`).join("")}
     ${[1,2,3].map(i=>`<line class="grid-line" x1="0" y1="${i*90}" x2="1000" y2="${i*90}"/>`).join("")}
-<<<<<<< HEAD
-<<<<<<< HEAD
     <g transform="${transform}">
       <path d="${path}" fill="url(#metal)" stroke="#f1d08a" stroke-width="${1+shape.thickness/35}" filter="url(#weaponGlow)" opacity="${["ハンマー","斧","ナックル"].includes(typeName)?0.15:1}"/>
       ${weaponTypeOverlay(typeName)}
@@ -119,23 +145,6 @@ export function drawEditor(svg,shapeInput,selectedIndex=0,typeName=""){
         <circle class="anchor ${a.index===selectedIndex?"selected":""}" data-index="${a.index}" cx="${a.x}" cy="${a.y}" r="10" fill="#fff" stroke="#171b24" stroke-width="4"/>
       `).join("")}
     </g>
-=======
-=======
->>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
-    <path d="${path}" fill="url(#metal)" stroke="#f1d08a" stroke-width="${1+shape.thickness/35}"/>
-    <rect x="5" y="162" width="95" height="36" rx="10" fill="#40292a"/>
-    <rect x="90" y="132" width="24" height="96" rx="8" fill="#ad7434"/>
-    ${anchors.map(a=>`
-      <line class="handle-line" x1="${a.x}" y1="${a.y}" x2="${a.inX}" y2="${a.inY}"/>
-      <line class="handle-line" x1="${a.x}" y1="${a.y}" x2="${a.outX}" y2="${a.outY}"/>
-      <circle class="handle" data-handle="in" data-index="${a.index}" cx="${a.inX}" cy="${a.inY}" r="7" fill="#e6b85e"/>
-      <circle class="handle" data-handle="out" data-index="${a.index}" cx="${a.outX}" cy="${a.outY}" r="7" fill="#e6b85e"/>
-      <circle class="anchor ${a.index===selectedIndex?"selected":""}" data-index="${a.index}" cx="${a.x}" cy="${a.y}" r="10" fill="#fff" stroke="#171b24" stroke-width="4"/>
-    `).join("")}
-<<<<<<< HEAD
->>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
-=======
->>>>>>> parent of 51c6275 (Upgrade Ver0.6 Freeform Editor)
     <text x="28" y="36" fill="#e6b85e" font-size="22">${typeName}</text>
     <text x="28" y="330" fill="#98a2b3" font-size="17">${fingerprint(shape)}</text>`;
 }
