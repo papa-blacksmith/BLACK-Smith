@@ -40,7 +40,6 @@ function updatePreview(){
   drawShape($('bpShapeSvg'),bpShape);
   $('forgePreview').textContent=TYPES[selectedType].icon;
   $('bpPreview').textContent=TYPES[blueprintType].icon;
-}deg) scale(${.75+(+$('lengthRange').value/170)})`;$('bpPreview').textContent=TYPES[blueprintType].icon}
 function saveBlueprint(){
   const shape=normalizeShape({...currentShape,weaponType:blueprintType});
   state.blueprints.unshift({
