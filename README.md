@@ -17,3 +17,16 @@
 
 ## GitHub Pages
 ZIP内の `BLACK-Smith-Ver0.6` の中身を、GitHubの `BLACK-Smith` フォルダへ上書きしてください。
+
+## Ver0.6 Editor Boost
+
+- Undo / Redo
+- 局所幅編集
+- 上側・下側の非対称幅
+- ギザ刃・欠け刃・両刃
+- 穴・棘
+- 宝石・翼・リング・チェーン
+- 発光
+- ズーム
+- 6種類の形状プリセット
+- 制御点複製
