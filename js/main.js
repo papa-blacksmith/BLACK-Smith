@@ -5,7 +5,23 @@ import { drawEditor, eventToLocal, createShapePreview } from "./features/editor.
 import { ForgeSystem } from "./features/ForgeSystem.js";
 import { EditorCore } from "./editor/EditorCore.js";
 import { WeaponPartSystem } from "./editor/WeaponPartSystem.js";
-import { OreInventorySystem, ORE_DEFINITIONS, ORE_INVENTORY_SIZE, ORE_STACK_LIMIT } from "./systems/OreInventorySystem.js";
+import {
+  OreInventorySystem,
+  ORE_DEFINITIONS,
+  ORE_CATALOG,
+  ORE_RARITIES,
+  ORE_INVENTORY_SIZE,
+  ORE_STACK_LIMIT
+} from "./systems/OreInventorySystem.js";
+import {
+  drawDailyOres,
+  normalizeOreDailyState,
+  canReceiveOreResults,
+  receiveOreResults,
+  getOreResultDetails,
+  getNextOreResetAt,
+  ORE_EFFECT_RULES
+} from "./systems/OreGachaSystem.js";
 
 const $=id=>document.getElementById(id);
 let state=loadState(),shape=cloneShape(DEFAULT_SHAPE),selectedType=0,selectedPoint=0;
@@ -14,6 +30,7 @@ let editorFramePending=false;
 let contextWorldPoint=null;
 let renameTargetPartId=null;
 let oreInventory=new OreInventorySystem(state.oreInventory);
+let selectedForgeOres=Array(5).fill(null);
 let activeEditorTab="shape";
 let undoStack=[],redoStack=[];
 let editorCore=null;
@@ -43,7 +60,17 @@ const dayKey=()=>{const d=new Date();if(d.getHours()<5)d.setDate(d.getDate()-1);
 const maxForges=()=>3;
 const remaining=()=>Math.max(0,maxForges()-state.used);
 
-function resetDaily(){const key=dayKey();if(state.day!==key){state.day=key;state.used=0;saveState(state)}}
+function resetDaily(){
+  const key=dayKey();
+
+  if(state.day!==key){
+    state.day=key;
+    state.used=0;
+  }
+
+  normalizeOreDailyState(state);
+  saveState(state);
+}
 function go(id){
   const target=$(id);
 
@@ -376,12 +403,19 @@ function renderOreInventory(){
 
   const testHost=$("oreTestButtons");
   if(testHost){
-    testHost.innerHTML=Object.values(ORE_DEFINITIONS).map((ore)=>`
-      <button type="button" class="secondary ore-add-button" data-add-ore="${ore.id}">
+    testHost.innerHTML=ORE_CATALOG.map((ore)=>`
+      <button
+        type="button"
+        class="secondary ore-add-button"
+        data-add-ore="${ore.id}"
+        title="${ORE_RARITIES[ore.rarity]?.label||ore.rarity}"
+      >
         ${ore.icon} ${ore.name} +1
       </button>
     `).join("");
   }
+
+  renderOreGacha();
 }
 
 function addOreToInventory(oreId,amount=1){
@@ -408,6 +442,190 @@ function removeOreFromInventory(oreId,amount=1){
     renderOreInventory();
   }
   return removed;
+}
+
+
+function formatResetRemaining(){
+  const milliseconds=Math.max(0,getNextOreResetAt().getTime()-Date.now());
+  const hours=Math.floor(milliseconds/3600000);
+  const minutes=Math.floor((milliseconds%3600000)/60000);
+  return `次回更新まで ${hours}時間${minutes}分`;
+}
+
+function renderOreGacha(){
+  const resultsHost=$("oreGachaResults");
+  const button=$("oreGachaButton");
+  const status=$("oreGachaStatus");
+  const resetLabel=$("oreGachaResetLabel");
+
+  if(!resultsHost||!button)return;
+
+  normalizeOreDailyState(state);
+  const details=getOreResultDetails(state.oreDailyResults);
+
+  resultsHost.innerHTML=details.length
+    ? details.map((ore)=>`
+        <article class="ore-gacha-result" style="--ore-color:${ore.color}">
+          <span>${ore.icon}</span>
+          <b>${ore.name}</b>
+          <small>${ore.rarityLabel}</small>
+        </article>
+      `).join("")
+    : Array.from({length:5},()=>`
+        <article class="ore-gacha-result empty">
+          <span>?</span>
+          <b>未抽選</b>
+          <small>毎朝5時更新</small>
+        </article>
+      `).join("");
+
+  if(resetLabel)resetLabel.textContent=formatResetRemaining();
+
+  if(state.oreDailyClaimed){
+    button.disabled=true;
+    button.textContent="本日分は受取済み";
+    if(status)status.textContent="次回は午前5時に更新されます。";
+    return;
+  }
+
+  button.disabled=false;
+
+  if(state.oreDailyResults.length){
+    button.textContent="保留中の5個を受け取る";
+    if(status){
+      status.textContent=canReceiveOreResults(
+        oreInventory,
+        state.oreDailyResults
+      )
+        ? "受け取り可能です。"
+        : "インベントリに空きを作ると受け取れます。";
+    }
+  }else{
+    button.textContent="本日の5個を抽選";
+    if(status)status.textContent="同じ鉱物が重複して出ることがあります。";
+  }
+}
+
+function handleOreGacha(){
+  normalizeOreDailyState(state);
+
+  if(state.oreDailyClaimed){
+    toast("本日分は受け取り済みです");
+    return;
+  }
+
+  if(!state.oreDailyResults.length){
+    state.oreDailyResults=drawDailyOres();
+  }
+
+  if(!canReceiveOreResults(oreInventory,state.oreDailyResults)){
+    saveState(state);
+    renderOreGacha();
+    toast("鉱石倉庫が満杯のため受け取り保留です");
+    return;
+  }
+
+  const received=receiveOreResults(
+    oreInventory,
+    state.oreDailyResults
+  );
+
+  if(!received.success){
+    saveState(state);
+    renderOreGacha();
+    toast("受け取りに失敗しました");
+    return;
+  }
+
+  state.oreDailyClaimed=true;
+  state.oreInventory=oreInventory.toJSON();
+  saveState(state);
+  render();
+  toast("本日の鉱物5個を受け取りました");
+}
+
+function getSelectedOreCount(oreId,exceptIndex=-1){
+  return selectedForgeOres.reduce((count,id,index)=>{
+    if(index===exceptIndex)return count;
+    return count+(id===oreId?1:0);
+  },0);
+}
+
+function renderForgeOreSlots(){
+  const host=$("forgeOreSlots");
+  const summary=$("forgeOreEffectSummary");
+  if(!host)return;
+
+  host.innerHTML=selectedForgeOres.map((selected,index)=>{
+    const options=ORE_CATALOG
+      .filter((ore)=>oreInventory.countOre(ore.id)>0)
+      .map((ore)=>{
+        const available=
+          oreInventory.countOre(ore.id)-
+          getSelectedOreCount(ore.id,index);
+        const disabled=available<=0&&selected!==ore.id;
+
+        return `<option
+          value="${ore.id}"
+          ${selected===ore.id?"selected":""}
+          ${disabled?"disabled":""}
+        >${ore.icon} ${ore.name}（${available+(
+          selected===ore.id?1:0
+        )}）</option>`;
+      }).join("");
+
+    return `
+      <label class="forge-ore-slot">
+        <span>${index+1}</span>
+        <select data-forge-ore-slot="${index}">
+          <option value="">⬜ デフォルト（コモン）</option>
+          ${options}
+        </select>
+      </label>
+    `;
+  }).join("");
+
+  if(summary){
+    const selected=selectedForgeOres
+      .filter(Boolean)
+      .map((id)=>ORE_DEFINITIONS[id])
+      .filter(Boolean);
+
+    summary.innerHTML=selected.length
+      ? selected.map((ore)=>{
+          const rule=ORE_EFFECT_RULES[ore.rarity];
+          return `<span style="--ore-color:${ore.color}">
+            ${ore.icon} ${ore.name}：
+            発動率 ${rule?.procRate??0}%
+          </span>`;
+        }).join("")
+      : "<span>鉱物未選択：コモンのデフォルト素材で鍛造します。</span>";
+  }
+}
+
+function validateForgeOreSelection(){
+  const counts={};
+
+  for(const oreId of selectedForgeOres.filter(Boolean)){
+    counts[oreId]=(counts[oreId]||0)+1;
+  }
+
+  return Object.entries(counts).every(([oreId,count])=>{
+    return oreInventory.countOre(oreId)>=count;
+  });
+}
+
+function consumeSelectedForgeOres(){
+  if(!validateForgeOreSelection())return false;
+
+  for(const oreId of selectedForgeOres.filter(Boolean)){
+    if(removeOreFromInventory(oreId,1)!==1)return false;
+  }
+
+  selectedForgeOres=Array(5).fill(null);
+  state.oreInventory=oreInventory.toJSON();
+  saveState(state);
+  return true;
 }
 
 function renderTypes(){
@@ -504,7 +722,7 @@ function render(){
   $("forgeRemaining").textContent=`${remaining()}/${maxForges()}`;
   $("forgeCounter").textContent=`${remaining()}/${maxForges()}`;
   $("heroWeapon").textContent=state.weapons[0]?.icon||"⚔️";
-  renderTypes();renderWeaponParts();renderPartTransformControls();renderControls();renderBlueprints();renderInventory();renderOreInventory();
+  renderTypes();renderWeaponParts();renderPartTransformControls();renderControls();renderBlueprints();renderInventory();renderOreInventory();renderForgeOreSlots();renderOreGacha();
   drawEditor(
     $("weaponEditor"),
     normalizeShape(shape),
@@ -550,6 +768,10 @@ const forgeSystem = new ForgeSystem({
   }),
   getSelectedType: () => selectedType,
   getRemaining: remaining,
+  getForgeOres: () => [...selectedForgeOres],
+  validateForgeOres: validateForgeOreSelection,
+  consumeForgeOres: consumeSelectedForgeOres,
+  oreDefinitions: ORE_DEFINITIONS,
   go,
   toast,
   getElement: $

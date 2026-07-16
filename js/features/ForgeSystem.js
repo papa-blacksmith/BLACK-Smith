@@ -1,3 +1,8 @@
+import {
+  evaluateForgeOreEffects,
+  adjustWeaponRarities
+} from "../systems/OreGachaSystem.js";
+
 export class ForgeSystem {
   constructor({
     types,
@@ -9,6 +14,10 @@ export class ForgeSystem {
     getShape,
     getSelectedType,
     getRemaining,
+    getForgeOres = () => [],
+    validateForgeOres = () => true,
+    consumeForgeOres = () => true,
+    oreDefinitions = {},
     go,
     toast,
     getElement = (id) => document.getElementById(id)
@@ -23,6 +32,10 @@ export class ForgeSystem {
     this.getShape = getShape;
     this.getSelectedType = getSelectedType;
     this.getRemaining = getRemaining;
+    this.getForgeOres = getForgeOres;
+    this.validateForgeOres = validateForgeOres;
+    this.consumeForgeOres = consumeForgeOres;
+    this.oreDefinitions = oreDefinitions;
 
     this.go = go;
     this.toast = toast;
@@ -45,16 +58,16 @@ export class ForgeSystem {
     ];
   }
 
-  rollRarity() {
+  rollRarity(rarities = this.rarities) {
     const roll = Math.random() * 100;
     let accumulated = 0;
 
-    for (const rarity of this.rarities) {
+    for (const rarity of rarities) {
       accumulated += Number(rarity.probability) || 0;
       if (roll < accumulated) return rarity;
     }
 
-    return this.rarities.at(-1);
+    return rarities.at(-1);
   }
 
   start() {
@@ -70,15 +83,22 @@ export class ForgeSystem {
       return false;
     }
 
+    if (!this.validateForgeOres()) {
+      this.toast("選択した鉱物の所持数が足りません");
+      return false;
+    }
+
     const selectedType = this.getSelectedType();
     const shape = this.getShape();
+    const forgeOres = this.getForgeOres();
 
     this.context = {
       shape: this.normalizeShape({
         ...shape,
         weaponType: selectedType
       }),
-      type: this.types[selectedType]
+      type: this.types[selectedType],
+      forgeOres
     };
 
     this.step = 0;
@@ -165,7 +185,14 @@ export class ForgeSystem {
         return;
       }
 
-      const rarity = this.rollRarity();
+      const oreEffects = evaluateForgeOreEffects(
+        this.context.forgeOres
+      );
+      const adjustedRarities = adjustWeaponRarities(
+        this.rarities,
+        oreEffects.rarityBoostPerTier
+      );
+      const rarity = this.rollRarity(adjustedRarities);
       const state = this.getState();
 
       if (this.getRemaining() <= 0) {
@@ -178,6 +205,24 @@ export class ForgeSystem {
         return;
       }
 
+      if (!this.validateForgeOres()) {
+        this.toast("選択した鉱物の所持数が足りません");
+        return;
+      }
+
+      if (!this.consumeForgeOres()) {
+        this.toast("鉱物の消費に失敗しました");
+        return;
+      }
+
+      const baseAttack =
+        (80 + Math.random() * 70) * rarity.multiplier;
+      const attackAfterFlat =
+        baseAttack + oreEffects.flatAttack;
+      const finalAttack =
+        attackAfterFlat *
+        (1 + oreEffects.percentAttack / 100);
+
       const weapon = {
         id: `${Date.now()}-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`,
         name:
@@ -188,9 +233,17 @@ export class ForgeSystem {
         icon: this.context.type.icon,
         rarity: rarity.name,
         color: rarity.color,
-        attack: Math.round(
-          (80 + Math.random() * 70) * rarity.multiplier
-        ),
+        attack: Math.round(finalAttack * 100) / 100,
+        baseAttack: Math.round(baseAttack * 100) / 100,
+        oreEffects,
+        forgeOres: this.context.forgeOres.map((oreId) => {
+          const ore = this.oreDefinitions[oreId];
+          return ore ? {
+            id: ore.id,
+            name: ore.name,
+            rarity: ore.rarity
+          } : null;
+        }).filter(Boolean),
         quality: this.quality,
         shape: structuredClone(this.context.shape),
         shapeId: this.fingerprint(this.context.shape),
@@ -229,6 +282,26 @@ export class ForgeSystem {
       <div class="row">
         <span>品質</span>
         <b>${weapon.quality}</b>
+      </div>
+      <div class="row">
+        <span>使用鉱物</span>
+        <b>${weapon.forgeOres.length
+          ? weapon.forgeOres.map((ore) => ore.name).join(" / ")
+          : "デフォルト（コモン）"
+        }</b>
+      </div>
+      <div class="row">
+        <span>鉱物効果</span>
+        <b>${weapon.oreEffects.activations.length
+          ? weapon.oreEffects.activations.map((effect) =>
+              effect.type === "percentAttack"
+                ? `${effect.oreName} 攻撃+${effect.value}%`
+                : effect.type === "rarityBoost"
+                  ? `${effect.oreName} 上位確率+${effect.value}%`
+                  : `${effect.oreName} 攻撃+${effect.value}`
+            ).join("<br>")
+          : "発動なし"
+        }</b>
       </div>
       <div class="row">
         <span>形状ID</span>

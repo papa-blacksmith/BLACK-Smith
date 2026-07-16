@@ -15,7 +15,7 @@
     <p class="sub">FORGE OF LEGENDS</p>
     <p class="slogan">魂を打て。<br>世界に一本だけの武器を。</p>
     <button class="primary" id="enterButton">鍛冶場へ入る</button>
-    <small class="version">Ver0.6 Ore Inventory Fixed</small>
+    <small class="version">Ver0.6 Ore Gacha & Forge Slots</small>
   </section>
 
   <section id="home" class="screen">
@@ -154,6 +154,24 @@
 
       <div id="shapeControls"></div>
 
+
+      <section class="forge-ore-panel">
+        <div class="forge-ore-heading">
+          <div>
+            <small>FORGE MATERIAL</small>
+            <strong>鉱物スロット</strong>
+          </div>
+          <span>最大5枠</span>
+        </div>
+
+        <p class="forge-ore-note">
+          空欄はコモンのデフォルト素材です。選択鉱物は鍛造完成時に1個消費します。
+        </p>
+
+        <div id="forgeOreSlots" class="forge-ore-slots"></div>
+        <div id="forgeOreEffectSummary" class="forge-ore-effect-summary"></div>
+      </section>
+
       <div class="grid2">
         <button class="secondary" id="saveBlueprintFromForge">設計図保存</button>
         <button class="primary" id="startForge">本鍛造へ</button>
@@ -207,6 +225,31 @@
       </div>
       <span class="pill"><b id="oreUsedSlots">0</b>/64</span>
     </header>
+
+
+    <section class="ore-gacha-panel">
+      <div class="ore-gacha-head">
+        <div>
+          <small>DAILY ORE DRAW</small>
+          <strong>本日の鉱物5個</strong>
+        </div>
+        <span id="oreGachaResetLabel">毎朝5時更新</span>
+      </div>
+
+      <div class="ore-gacha-rates">
+        <span>🟩 70%</span>
+        <span>🟦 15%</span>
+        <span>🟪 8%</span>
+        <span>🟧 5%</span>
+        <span>🔮 2%</span>
+      </div>
+
+      <div id="oreGachaResults" class="ore-gacha-results"></div>
+      <button type="button" class="primary" id="oreGachaButton">
+        本日の5個を抽選
+      </button>
+      <small id="oreGachaStatus" class="ore-gacha-status"></small>
+    </section>
 
     <div class="ore-summary">
       <span>1スロット最大 <b>10個</b></span>

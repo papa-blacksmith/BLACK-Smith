@@ -1004,3 +1004,172 @@ input[type="range"]:active{
     padding-inline:2px;
   }
 }
+
+
+/* Ore Gacha & Forge Material Slots */
+.forge-ore-panel,
+.ore-gacha-panel{
+  margin:12px 0;
+  padding:13px;
+  border:1px solid #394455;
+  border-radius:15px;
+  background:linear-gradient(180deg,#151b24,#10151d);
+}
+
+.forge-ore-heading,
+.ore-gacha-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.forge-ore-heading small,
+.ore-gacha-head small{
+  display:block;
+  color:#8995a6;
+  font-size:8px;
+  letter-spacing:.14em;
+}
+
+.forge-ore-heading strong,
+.ore-gacha-head strong{
+  display:block;
+  margin-top:2px;
+  color:#edc46d;
+}
+
+.forge-ore-heading > span,
+.ore-gacha-head > span{
+  color:#9fa9b8;
+  font-size:9px;
+}
+
+.forge-ore-note{
+  margin:8px 0 10px;
+  color:#9ca6b5;
+  font-size:9px;
+}
+
+.forge-ore-slots{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:6px;
+}
+
+.forge-ore-slot{
+  display:grid;
+  gap:5px;
+  min-width:0;
+}
+
+.forge-ore-slot > span{
+  color:#d7b264;
+  font-size:9px;
+  text-align:center;
+}
+
+.forge-ore-slot select{
+  width:100%;
+  min-width:0;
+  min-height:42px;
+  padding:6px;
+  border:1px solid #3b4656;
+  border-radius:9px;
+  background:#0f141c;
+  color:#eef1f5;
+  font-size:8px;
+}
+
+.forge-ore-effect-summary{
+  display:grid;
+  gap:4px;
+  margin-top:9px;
+  color:#aeb7c5;
+  font-size:8px;
+}
+
+.forge-ore-effect-summary span{
+  padding:6px 8px;
+  border-left:2px solid var(--ore-color,#5e6877);
+  background:#121821;
+}
+
+.ore-gacha-rates{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:4px;
+  margin:10px 0;
+}
+
+.ore-gacha-rates span{
+  padding:5px 2px;
+  border:1px solid #313b49;
+  border-radius:8px;
+  background:#111720;
+  color:#cbd2dc;
+  font-size:8px;
+  text-align:center;
+}
+
+.ore-gacha-results{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:6px;
+  margin-bottom:10px;
+}
+
+.ore-gacha-result{
+  min-width:0;
+  padding:8px 4px;
+  border:1px solid color-mix(in srgb,var(--ore-color) 55%,#354052);
+  border-radius:10px;
+  background:
+    linear-gradient(180deg,color-mix(in srgb,var(--ore-color) 12%,transparent),transparent),
+    #121821;
+  text-align:center;
+}
+
+.ore-gacha-result > span{
+  display:block;
+  font-size:21px;
+}
+
+.ore-gacha-result b{
+  display:block;
+  margin-top:5px;
+  overflow:hidden;
+  color:#eef1f5;
+  font-size:8px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.ore-gacha-result small{
+  display:block;
+  margin-top:3px;
+  color:var(--ore-color,#8792a2);
+  font-size:7px;
+}
+
+.ore-gacha-result.empty{
+  opacity:.58;
+}
+
+.ore-gacha-status{
+  display:block;
+  margin-top:7px;
+  color:#9aa5b4;
+  text-align:center;
+}
+
+@media(max-width:650px){
+  .forge-ore-slots{
+    grid-template-columns:1fr;
+  }
+
+  .ore-gacha-results{
+    grid-template-columns:repeat(5,minmax(48px,1fr));
+    overflow-x:auto;
+  }
+}
