@@ -564,6 +564,28 @@ function getSelectedOreCount(oreId,exceptIndex=-1){
   },0);
 }
 
+function getForgeOreSelectionCounts(selection=selectedForgeOres){
+  return selection
+    .filter(Boolean)
+    .reduce((counts,oreId)=>{
+      counts[oreId]=(counts[oreId]||0)+1;
+      return counts;
+    },{});
+}
+
+function canSelectForgeOre(oreId,targetIndex){
+  if(!oreId)return true;
+
+  const currentlySelected=selectedForgeOres[targetIndex];
+  const selectedElsewhere=getSelectedOreCount(oreId,targetIndex);
+  const owned=oreInventory.countOre(oreId);
+
+  // 同じ枠で同じ鉱物を選び直す場合は、その1個を含めて判定する。
+  const required=selectedElsewhere+1;
+
+  return owned>=required || currentlySelected===oreId;
+}
+
 function renderForgeOreSlots(){
   const host=$("forgeOreSlots");
   const summary=$("forgeOreEffectSummary");
@@ -573,18 +595,21 @@ function renderForgeOreSlots(){
     const options=ORE_CATALOG
       .filter((ore)=>oreInventory.countOre(ore.id)>0)
       .map((ore)=>{
-        const available=
-          oreInventory.countOre(ore.id)-
-          getSelectedOreCount(ore.id,index);
-        const disabled=available<=0&&selected!==ore.id;
+        const owned=oreInventory.countOre(ore.id);
+        const selectedElsewhere=getSelectedOreCount(ore.id,index);
+        const remainingAfterSelection=Math.max(
+          0,
+          owned-selectedElsewhere-(selected===ore.id?1:0)
+        );
+        const canSelect=
+          selected===ore.id ||
+          owned>selectedElsewhere;
 
         return `<option
           value="${ore.id}"
           ${selected===ore.id?"selected":""}
-          ${disabled?"disabled":""}
-        >${ore.icon} ${ore.name}（${available+(
-          selected===ore.id?1:0
-        )}）</option>`;
+          ${canSelect?"":"disabled"}
+        >${ore.icon} ${ore.name}（所持${owned} / 残${remainingAfterSelection}）</option>`;
       }).join("");
 
     return `
@@ -616,28 +641,60 @@ function renderForgeOreSlots(){
   }
 }
 
-function validateForgeOreSelection(){
-  const counts={};
+function getForgeOreValidation(){
+  const counts=getForgeOreSelectionCounts();
+  const shortages=[];
 
-  for(const oreId of selectedForgeOres.filter(Boolean)){
-    counts[oreId]=(counts[oreId]||0)+1;
+  for(const [oreId,required] of Object.entries(counts)){
+    const owned=oreInventory.countOre(oreId);
+
+    if(owned<required){
+      shortages.push({
+        oreId,
+        required,
+        owned,
+        oreName:ORE_DEFINITIONS[oreId]?.name||oreId
+      });
+    }
   }
 
-  return Object.entries(counts).every(([oreId,count])=>{
-    return oreInventory.countOre(oreId)>=count;
-  });
+  return {
+    valid:shortages.length===0,
+    shortages,
+    counts
+  };
+}
+
+function validateForgeOreSelection(){
+  return getForgeOreValidation().valid;
 }
 
 function consumeSelectedForgeOres(){
-  if(!validateForgeOreSelection())return false;
+  const validation=getForgeOreValidation();
+  if(!validation.valid)return false;
 
-  for(const oreId of selectedForgeOres.filter(Boolean)){
-    if(removeOreFromInventory(oreId,1)!==1)return false;
+  // 検証後、同じ鉱物をまとめて一括消費する。
+  for(const [oreId,amount] of Object.entries(validation.counts)){
+    const removed=oreInventory.removeOre(oreId,amount);
+
+    if(removed!==amount){
+      console.error("鉱物消費数が一致しません",{
+        oreId,
+        requested:amount,
+        removed
+      });
+      return false;
+    }
   }
 
   selectedForgeOres=Array(5).fill(null);
   state.oreInventory=oreInventory.toJSON();
   saveState(state);
+
+  // 消費完了後に一度だけ表示を更新する。
+  renderOreInventory();
+  renderForgeOreSlots();
+
   return true;
 }
 
@@ -1199,6 +1256,39 @@ document.addEventListener("pointerdown",(event)=>{
     pushHistory();
   }
 },{passive:true});
+
+
+document.addEventListener("change",(event)=>{
+  const select=event.target.closest("[data-forge-ore-slot]");
+  if(!select)return;
+
+  const index=Number(select.dataset.forgeOreSlot);
+
+  if(!Number.isInteger(index)||index<0||index>=selectedForgeOres.length){
+    return;
+  }
+
+  const previous=selectedForgeOres[index];
+  const next=select.value||null;
+
+  if(next&&!canSelectForgeOre(next,index)){
+    const ore=ORE_DEFINITIONS[next];
+    const owned=oreInventory.countOre(next);
+    const selectedElsewhere=getSelectedOreCount(next,index);
+
+    toast(
+      `${ore?.name||next}は${owned}個所持中です。`+
+      `すでに${selectedElsewhere}枠で使用しています`
+    );
+
+    select.value=previous||"";
+    renderForgeOreSlots();
+    return;
+  }
+
+  selectedForgeOres[index]=next;
+  renderForgeOreSlots();
+});
 
 document.addEventListener("change",(event)=>{
   if(event.target.matches('input[type="range"], input[type="color"], [data-part-socket]')){

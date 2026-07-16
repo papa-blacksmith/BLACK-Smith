@@ -276,7 +276,11 @@ export class ForgeSystem {
         <b style="color:${weapon.color}">${weapon.rarity}</b>
       </div>
       <div class="row">
-        <span>攻撃力</span>
+        <span>基本攻撃力</span>
+        <b>${weapon.baseAttack ?? weapon.attack}</b>
+      </div>
+      <div class="row">
+        <span>最終攻撃力</span>
         <b>${weapon.attack}</b>
       </div>
       <div class="row">
