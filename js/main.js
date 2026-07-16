@@ -77,6 +77,7 @@ function initializeEditorCore(){
   });
 
   editorCore.initialize();
+  editorCore.camera.reset();
 }
 
 
@@ -665,6 +666,7 @@ document.addEventListener("click",e=>{
     selectedType=Number(t.dataset.type);
     shape=partSystem.switchWeaponType(selectedType,shape);
     selectedPoint=0;
+    editorCore?.camera.reset();
     render();
   }
   const partButton=e.target.closest("[data-part-id]");
@@ -794,8 +796,9 @@ document.addEventListener("change",(event)=>{
 $("resetPartTransform")?.addEventListener("click",()=>{
   pushHistory();
   partSystem.resetActiveTransform(shape);
+  editorCore?.camera.reset();
   render();
-  toast("パーツ位置をリセットしました");
+  toast("パーツ位置と表示をリセットしました");
 });
 
 $("enterButton").onclick=enter;$("undoShape").onclick=undo;$("redoShape").onclick=redo;$("addPoint").onclick=addPoint;$("removePoint").onclick=removePoint;$("smoothPoint").onclick=smoothPoint;$("cornerPoint").onclick=cornerPoint;$("mirrorShape").onclick=mirror;$("duplicatePoint").onclick=duplicateSelectedPoint;$("resetShape").onclick=reset;$("saveBlueprint").onclick=()=>saveBlueprint();$("saveBlueprintFromForge").onclick=()=>saveBlueprint(`${TYPES[selectedType].name}設計図`);$("startForge").onclick=()=>forgeSystem.start();$("advanceForge").onclick=()=>forgeSystem.advance();

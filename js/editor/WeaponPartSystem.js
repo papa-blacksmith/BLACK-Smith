@@ -57,6 +57,23 @@ export const WEAPON_PART_DEFINITIONS = {
   ]
 };
 
+function sanitizeTransform(transform = {}, socket = "root") {
+  const clamp = (value, min, max, fallback) => {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return fallback;
+    return Math.min(max, Math.max(min, number));
+  };
+
+  return {
+    x: clamp(transform.x, -380, 380, 0),
+    y: clamp(transform.y, -180, 180, 0),
+    rotation: clamp(transform.rotation, -180, 180, 0),
+    scaleX: clamp(transform.scaleX, .15, 2.5, 1),
+    scaleY: clamp(transform.scaleY, .15, 2.5, 1),
+    socket: transform.socket || socket
+  };
+}
+
 const PART_DEFAULTS = {
   blade: { width: 45, thickness: 35, tip: 65, curve: 20 },
   bladeA: { width: 32, thickness: 25, tip: 78, curve: 22 },
@@ -126,7 +143,7 @@ export class WeaponPartSystem {
       transforms: Object.fromEntries(definitions.map((definition, index) => [
         definition.id,
         {
-          x: index === 0 ? 0 : -220 - index * 70,
+          x: 0,
           y: 0,
           rotation: 0,
           scaleX: 1,
@@ -201,7 +218,7 @@ export class WeaponPartSystem {
           shape: cloneShape(state.parts[partId]),
           visible: state.visibility[partId] !== false,
           locked: state.locked[partId] === true,
-          transform: { ...state.transforms[partId] }
+          transform: sanitizeTransform(state.transforms[partId], "root")
         };
       })
     };
@@ -221,14 +238,10 @@ export class WeaponPartSystem {
         });
         state.visibility[item.id] = item.visible !== false;
         state.locked[item.id] = item.locked === true;
-        state.transforms[item.id] = {
-          x: Number(item.transform?.x) || 0,
-          y: Number(item.transform?.y) || 0,
-          rotation: Number(item.transform?.rotation) || 0,
-          scaleX: Number(item.transform?.scaleX) || 1,
-          scaleY: Number(item.transform?.scaleY) || 1,
-          socket: item.transform?.socket || "root"
-        };
+        state.transforms[item.id] = sanitizeTransform(
+          item.transform,
+          item.transform?.socket || "root"
+        );
       }
     });
 
@@ -276,7 +289,7 @@ export class WeaponPartSystem {
         locked: state.locked[partId] === true,
         active: partId === this.activePartId,
         layerIndex,
-        transform: { ...state.transforms[partId] }
+        transform: sanitizeTransform(state.transforms[partId], "root")
       };
     });
   }
@@ -319,9 +332,12 @@ export class WeaponPartSystem {
 
   getActiveTransform() {
     const state = this.getState();
-    return { ...(state.transforms[this.activePartId] || {
-      x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, socket: "root"
-    }) };
+    const transform = sanitizeTransform(
+      state.transforms[this.activePartId],
+      "root"
+    );
+    state.transforms[this.activePartId] = transform;
+    return { ...transform };
   }
 
   updateActiveTransform(patch, currentShape) {
@@ -331,16 +347,14 @@ export class WeaponPartSystem {
       x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, socket: "root"
     };
 
-    state.transforms[this.activePartId] = {
-      ...current,
-      ...patch,
-      x: Number(patch.x ?? current.x),
-      y: Number(patch.y ?? current.y),
-      rotation: Number(patch.rotation ?? current.rotation),
-      scaleX: Math.max(.1, Number(patch.scaleX ?? current.scaleX)),
-      scaleY: Math.max(.1, Number(patch.scaleY ?? current.scaleY)),
-      socket: patch.socket ?? current.socket
-    };
+    state.transforms[this.activePartId] = sanitizeTransform(
+      {
+        ...current,
+        ...patch,
+        socket: patch.socket ?? current.socket
+      },
+      current.socket || "root"
+    );
   }
 
   resetActiveTransform(currentShape) {

@@ -228,77 +228,158 @@ export function drawLayeredEditor(
 ) {
   if (!svg) return;
 
-  const active = parts.find((part) => part.id === activePartId);
-  if (!active) {
+  const safeParts = Array.isArray(parts) ? parts : [];
+  const active =
+    safeParts.find((part) => part.id === activePartId) ||
+    safeParts.find((part) => part.active) ||
+    safeParts[0];
+
+  if (!active?.shape) {
     svg.innerHTML = "";
     return;
   }
 
-  // First render active part using existing renderer.
-  drawEditor(svg, active.shape, selectedIndex, `${typeName}・${active.label}`);
+  try {
+    drawEditor(
+      svg,
+      active.shape,
+      selectedIndex,
+      `${typeName}・${active.label || ""}`
+    );
 
+    const defs = svg.querySelector("defs");
+    const activeContent = [...svg.children].find(
+      (node) => node.tagName?.toLowerCase() === "g"
+    );
 
-  const activeTransform = active.transform || {};
-  const activeTx = Number(activeTransform.x) || 0;
-  const activeTy = Number(activeTransform.y) || 0;
-  const activeRotation = Number(activeTransform.rotation) || 0;
-  const activeScaleX = Number(activeTransform.scaleX) || 1;
-  const activeScaleY = Number(activeTransform.scaleY) || 1;
+    if (!activeContent) {
+      svg.dataset.activePart = active.id;
+      return;
+    }
 
-  const movableNodes = [...svg.children].filter((node) =>
-    node.tagName !== "defs" &&
-    node.tagName !== "text"
-  );
+    const activeTransform = normalizePartTransform(active.transform);
 
-  const activeGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  activeGroup.setAttribute("class", "active-part-transform");
-  activeGroup.setAttribute(
-    "transform",
-    `translate(${activeTx} ${activeTy}) rotate(${activeRotation} 500 180) scale(${activeScaleX} ${activeScaleY})`
-  );
+    const wrapper = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "g"
+    );
+    wrapper.setAttribute("class", "active-part-transform");
+    wrapper.setAttribute(
+      "transform",
+      partTransformToSvg(activeTransform)
+    );
 
-  movableNodes.forEach((node) => activeGroup.appendChild(node));
-  svg.appendChild(activeGroup);
+    activeContent.parentNode.insertBefore(wrapper, activeContent);
+    wrapper.appendChild(activeContent);
 
-  // Capture active editor groups, then prepend non-active visible parts as passive layers.
-  const passiveLayers = parts
-    .filter((part) => part.visible && part.id !== activePartId)
-    .map((part, index) => {
-      const temp = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      drawEditor(temp, part.shape, -1, part.label);
+    const passiveMarkup = safeParts
+      .filter(
+        (part) =>
+          part?.shape &&
+          part.visible !== false &&
+          part.id !== active.id
+      )
+      .map((part, index) => {
+        const temp = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "svg"
+        );
 
-      const weaponPath = temp.querySelector('path[fill^="url"], path[stroke="#f1d08a"]');
-      const overlayGroup = temp.querySelector(".weapon-type-overlay");
+        drawEditor(temp, part.shape, -1, part.label || "");
 
-      const opacity = 0.34 + Math.min(0.28, index * 0.05);
-      const t = part.transform || {};
-      const tx = Number(t.x) || 0;
-      const ty = Number(t.y) || 0;
-      const rotation = Number(t.rotation) || 0;
-      const scaleX = Number(t.scaleX) || 1;
-      const scaleY = Number(t.scaleY) || 1;
+        const tempContent = [...temp.children].find(
+          (node) => node.tagName?.toLowerCase() === "g"
+        );
 
-      return `
-        <g
-          class="passive-part-layer"
-          data-passive-part="${part.id}"
-          opacity="${opacity}"
-          transform="translate(${tx} ${ty}) rotate(${rotation} 500 180) scale(${scaleX} ${scaleY})"
-          pointer-events="none"
-        >
-          ${weaponPath ? weaponPath.outerHTML : ""}
-          ${overlayGroup ? overlayGroup.outerHTML : ""}
-        </g>
-      `;
-    })
-    .join("");
+        if (!tempContent) return "";
 
-  const defs = svg.querySelector("defs");
-  if (defs) {
-    defs.insertAdjacentHTML("afterend", passiveLayers);
-  } else {
-    svg.insertAdjacentHTML("afterbegin", passiveLayers);
+        const clone = tempContent.cloneNode(true);
+
+        clone
+          .querySelectorAll(
+            ".handle-line,.editor-hit-target,.handle,.width-handle,.anchor"
+          )
+          .forEach((node) => node.remove());
+
+        const transform = normalizePartTransform(part.transform);
+        const opacity = Math.min(0.58, 0.30 + index * 0.055);
+
+        return `
+          <g
+            class="passive-part-layer"
+            data-passive-part="${part.id}"
+            opacity="${opacity}"
+            transform="${partTransformToSvg(transform)}"
+            pointer-events="none"
+          >
+            ${clone.innerHTML}
+          </g>
+        `;
+      })
+      .join("");
+
+    if (passiveMarkup) {
+      if (defs) {
+        defs.insertAdjacentHTML("afterend", passiveMarkup);
+      } else {
+        svg.insertAdjacentHTML("afterbegin", passiveMarkup);
+      }
+    }
+
+    svg.dataset.activePart = active.id;
+  } catch (error) {
+    console.error("Layered editor rendering failed:", error);
+
+    // 最低限、選択中パーツだけは必ず表示する。
+    drawEditor(
+      svg,
+      active.shape,
+      selectedIndex,
+      `${typeName}・${active.label || ""}`
+    );
+
+    svg.dataset.activePart = active.id;
   }
-
-  svg.dataset.activePart = activePartId;
 }
+
+function normalizePartTransform(transform = {}) {
+  return {
+    x: clampTransformNumber(transform.x, -380, 380, 0),
+    y: clampTransformNumber(transform.y, -180, 180, 0),
+    rotation: clampTransformNumber(
+      transform.rotation,
+      -180,
+      180,
+      0
+    ),
+    scaleX: clampTransformNumber(
+      transform.scaleX,
+      0.15,
+      2.5,
+      1
+    ),
+    scaleY: clampTransformNumber(
+      transform.scaleY,
+      0.15,
+      2.5,
+      1
+    )
+  };
+}
+
+function clampTransformNumber(value, min, max, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
+}
+
+function partTransformToSvg(transform) {
+  return [
+    `translate(${transform.x} ${transform.y})`,
+    `translate(500 180)`,
+    `rotate(${transform.rotation})`,
+    `scale(${transform.scaleX} ${transform.scaleY})`,
+    `translate(-500 -180)`
+  ].join(" ");
+}
+

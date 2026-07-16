@@ -713,3 +713,20 @@ input[type="range"]:active{
     grid-template-columns:1fr;
   }
 }
+
+
+/* Socket Transform Display Hotfix */
+.active-part-transform,
+.passive-part-layer{
+  transform-box:view-box;
+  transform-origin:500px 180px;
+}
+
+.weapon-editor > text{
+  pointer-events:none;
+}
+
+.canvas-stage .weapon-editor{
+  visibility:visible;
+  opacity:1;
+}
