@@ -1,7 +1,7 @@
 import { TYPES, RARITIES } from "./core/data.js";
 import { loadState, saveState } from "./core/storage.js";
 import { DEFAULT_SHAPE, cloneShape, normalizeShape, fingerprint } from "./core/shapeModel.js";
-import { drawEditor, eventToLocal, createShapePreview } from "./features/editor.js";
+import { drawEditor, eventToLocal, createExactShapePreview } from "./features/editor.js";
 import { ForgeSystem } from "./features/ForgeSystem.js";
 import { EditorCore } from "./editor/EditorCore.js";
 import { WeaponPartSystem } from "./editor/WeaponPartSystem.js";
@@ -781,7 +781,7 @@ function renderInventory(){
   $("inventoryCount").textContent=state.weapons.length;
   $("inventoryGrid").innerHTML=state.weapons.map((w,i)=>`<button class="weapon-card" data-weapon="${i}">
     <span class="badge" style="color:${w.color}">${w.rarity}</span>
-    <div class="inventory-preview">${w.shape ? createShapePreview(w.shape,w.type) : `<div class="icon">${w.icon}</div>`}</div>
+    <div class="inventory-preview">${w.shape ? createExactShapePreview(w.shape,w.type,`${w.id||i}_${i}`) : `<div class="icon">${w.icon}</div>`}</div>
     <b>${w.name}</b>
     <small>${w.type}</small>
     ${w.shapeId ? `<small class="shape-code">${w.shapeId}</small>` : ""}

@@ -140,6 +140,63 @@ export function eventToLocal(svg,event){
 }
 
 
+
+export function createExactShapePreview(
+  shapeInput,
+  typeName = "",
+  previewKey = ""
+) {
+  const svg = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "svg"
+  );
+
+  svg.setAttribute("viewBox", "0 0 1000 360");
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  svg.setAttribute(
+    "aria-label",
+    `${typeName || "武器"}の保存形状プレビュー`
+  );
+  svg.classList.add("weapon-mini-preview", "exact-preview");
+
+  drawEditor(svg, shapeInput, -1, typeName);
+
+  svg.querySelectorAll(
+    [
+      ".grid-line",
+      ".handle-line",
+      ".editor-hit-target",
+      ".handle",
+      ".width-handle",
+      ".anchor",
+      "text"
+    ].join(",")
+  ).forEach((node) => node.remove());
+
+  const safeKey = String(previewKey || fingerprint(shapeInput))
+    .replace(/[^a-zA-Z0-9_-]/g, "")
+    .slice(0, 40);
+
+  const metalId = `inventoryMetal_${safeKey}`;
+  const glowId = `inventoryGlow_${safeKey}`;
+
+  const metal = svg.querySelector("#metal");
+  const glow = svg.querySelector("#weaponGlow");
+
+  if (metal) metal.id = metalId;
+  if (glow) glow.id = glowId;
+
+  svg.querySelectorAll("[fill='url(#metal)']").forEach((node) => {
+    node.setAttribute("fill", `url(#${metalId})`);
+  });
+
+  svg.querySelectorAll("[filter='url(#weaponGlow)']").forEach((node) => {
+    node.setAttribute("filter", `url(#${glowId})`);
+  });
+
+  return svg.outerHTML;
+}
+
 export function createShapePreview(shapeInput, typeName = "") {
   const shape = normalizeShape(shapeInput);
   const sx = 18, sy = 18, ux = 244, uy = 84;
