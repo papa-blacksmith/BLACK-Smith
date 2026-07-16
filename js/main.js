@@ -4,6 +4,7 @@ import { DEFAULT_SHAPE, cloneShape, normalizeShape, fingerprint } from "./core/s
 import { drawEditor, eventToLocal, createShapePreview } from "./features/editor.js";
 import { ForgeSystem } from "./features/ForgeSystem.js";
 import { EditorCore } from "./editor/EditorCore.js";
+import { WeaponPartSystem } from "./editor/WeaponPartSystem.js";
 
 const $=id=>document.getElementById(id);
 let state=loadState(),shape=cloneShape(DEFAULT_SHAPE),selectedType=0,selectedPoint=0;
@@ -13,12 +14,28 @@ let contextWorldPoint=null;
 let activeEditorTab="shape";
 let undoStack=[],redoStack=[];
 let editorCore=null;
+let partSystem=new WeaponPartSystem(shape,selectedType);
 
 const toast=msg=>{const el=$("toast");el.textContent=msg;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),1600)};
-const snapshot=()=>JSON.stringify(normalizeShape(shape));
+const snapshot=()=>JSON.stringify({
+  shape:normalizeShape(shape),
+  selectedType,
+  parts:partSystem.getPartsPayload(shape)
+});
 function pushHistory(){const s=snapshot();if(undoStack.at(-1)!==s)undoStack.push(s);if(undoStack.length>60)undoStack.shift();redoStack=[];}
-function undo(){if(!undoStack.length)return toast("戻せる操作がありません");redoStack.push(snapshot());shape=normalizeShape(JSON.parse(undoStack.pop()));render();}
-function redo(){if(!redoStack.length)return toast("進める操作がありません");undoStack.push(snapshot());shape=normalizeShape(JSON.parse(redoStack.pop()));render();}
+function restoreEditorSnapshot(raw){
+  const data=typeof raw==="string"?JSON.parse(raw):raw;
+  if(data?.parts){
+    selectedType=Number(data.selectedType)||0;
+    partSystem.loadPartsPayload(selectedType,data.parts,data.shape);
+    shape=partSystem.switchPart(data.parts.activePartId,data.shape);
+  }else{
+    shape=normalizeShape(data);
+  }
+  selectedPoint=0;
+}
+function undo(){if(!undoStack.length)return toast("戻せる操作がありません");redoStack.push(snapshot());restoreEditorSnapshot(undoStack.pop());render();}
+function redo(){if(!redoStack.length)return toast("進める操作がありません");undoStack.push(snapshot());restoreEditorSnapshot(redoStack.pop());render();}
 const dayKey=()=>{const d=new Date();if(d.getHours()<5)d.setDate(d.getDate()-1);return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`};
 const maxForges=()=>3;
 const remaining=()=>Math.max(0,maxForges()-state.used);
@@ -105,6 +122,36 @@ function bindCanvasControls(){
   window.addEventListener("pointercancel",()=>{
     stage?.classList.remove("is-panning");
   });
+}
+
+
+function renderWeaponParts(){
+  const host=$("weaponPartList");
+  if(!host)return;
+
+  const definitions=partSystem.getDefinitions(selectedType);
+  const active=partSystem.activePartId;
+  const activeIndex=Math.max(0,definitions.findIndex((part)=>part.id===active));
+
+  host.innerHTML=definitions.map((part,index)=>`
+    <button
+      type="button"
+      class="weapon-part-button ${part.id===active?"active":""}"
+      data-part-id="${part.id}"
+    >
+      <span class="part-icon">${part.icon}</span>
+      <span>
+        <b>${part.label}</b>
+        <small>${index+1}</small>
+      </span>
+    </button>
+  `).join("");
+
+  const label=$("activePartLabel");
+  if(label)label.textContent=partSystem.getActiveDefinition()?.label||"パーツ";
+
+  const count=$("partCountLabel");
+  if(count)count.textContent=`${activeIndex+1}/${definitions.length}`;
 }
 
 function renderTypes(){
@@ -201,8 +248,8 @@ function render(){
   $("forgeRemaining").textContent=`${remaining()}/${maxForges()}`;
   $("forgeCounter").textContent=`${remaining()}/${maxForges()}`;
   $("heroWeapon").textContent=state.weapons[0]?.icon||"⚔️";
-  renderTypes();renderControls();renderBlueprints();renderInventory();
-  drawEditor($("weaponEditor"),shape,selectedPoint,TYPES[selectedType].name);
+  renderTypes();renderWeaponParts();renderControls();renderBlueprints();renderInventory();
+  drawEditor($("weaponEditor"),shape,selectedPoint,`${TYPES[selectedType].name}・${partSystem.getActiveDefinition()?.label||""}`);
   editorCore?.setDocument({
     version:1,
     weaponType:selectedType,
@@ -211,10 +258,22 @@ function render(){
 }
 function save(){saveState(state);render()}
 function saveBlueprint(name=$("blueprintName").value||"無銘の設計図"){
-  state.blueprints.unshift({id:String(Date.now()),name,shape:normalizeShape({...shape,weaponType:selectedType})});
+  state.blueprints.unshift({
+    id:String(Date.now()),
+    name,
+    shape:normalizeShape({
+      ...shape,
+      weaponType:selectedType,
+      parts:partSystem.getPartsPayload(shape)
+    })
+  });
   save();toast("設計図を保存しました");
 }
-function loadBlueprint(i){const b=state.blueprints[i];if(!b)return;shape=normalizeShape(b.shape);selectedType=shape.weaponType;$("blueprintName").value=b.name;go("forge");toast("設計図を読み込みました")}
+function loadBlueprint(i){const b=state.blueprints[i];if(!b)return;selectedType=b.shape.weaponType;
+  partSystem.loadPartsPayload(selectedType,b.shape.parts,b.shape);
+  shape=b.shape.parts
+    ? partSystem.switchPart(b.shape.parts.activePartId,b.shape)
+    : normalizeShape(b.shape);$("blueprintName").value=b.name;go("forge");toast("設計図を読み込みました")}
 
 const forgeSystem = new ForgeSystem({
   types: TYPES,
@@ -223,7 +282,11 @@ const forgeSystem = new ForgeSystem({
   fingerprint,
   getState: () => state,
   saveState: save,
-  getShape: () => shape,
+  getShape: () => normalizeShape({
+    ...shape,
+    weaponType:selectedType,
+    parts:partSystem.getPartsPayload(shape)
+  }),
   getSelectedType: () => selectedType,
   getRemaining: remaining,
   go,
@@ -236,7 +299,16 @@ function removePoint(){deleteSelectedPoint()}
 function smoothPoint(){pushHistory();const p=shape.points[selectedPoint];p.smooth=true;const lenIn=Math.hypot(p.inX,p.inY)||.08,lenOut=Math.hypot(p.outX,p.outY)||.08,angle=Math.atan2(p.outY,p.outX);p.outX=Math.cos(angle)*lenOut;p.outY=Math.sin(angle)*lenOut;p.inX=-Math.cos(angle)*lenIn;p.inY=-Math.sin(angle)*lenIn;render()}
 function cornerPoint(){pushHistory();shape.points[selectedPoint].smooth=false;render()}
 function mirror(){pushHistory();shape.points=shape.points.map(p=>({...p,x:1-p.x,inX:-p.outX,inY:p.outY,outX:-p.inX,outY:p.inY})).sort((a,b)=>a.x-b.x);render()}
-function reset(){pushHistory();shape=cloneShape(DEFAULT_SHAPE);shape.weaponType=selectedType;selectedPoint=0;render()}
+function reset(){
+  pushHistory();
+  const currentPart=partSystem.activePartId;
+  const fresh=new WeaponPartSystem(cloneShape(DEFAULT_SHAPE),selectedType);
+  const definition=fresh.getDefinitions(selectedType).find((part)=>part.id===currentPart);
+  shape=fresh.switchPart(definition?.id||fresh.activePartId,cloneShape(DEFAULT_SHAPE));
+  partSystem.saveCurrentShape(shape);
+  selectedPoint=0;
+  render();
+}
 
 
 function applyPreset(id){
@@ -491,7 +563,22 @@ function bindEditor(){
 
 document.addEventListener("click",e=>{
   const g=e.target.closest("[data-go]");if(g)go(g.dataset.go);
-  const t=e.target.closest("[data-type]");if(t){selectedType=Number(t.dataset.type);shape.weaponType=selectedType;render();}
+  const t=e.target.closest("[data-type]");
+  if(t){
+    pushHistory();
+    selectedType=Number(t.dataset.type);
+    shape=partSystem.switchWeaponType(selectedType,shape);
+    selectedPoint=0;
+    render();
+  }
+  const partButton=e.target.closest("[data-part-id]");
+  if(partButton){
+    pushHistory();
+    shape=partSystem.switchPart(partButton.dataset.partId,shape);
+    selectedPoint=0;
+    render();
+  }
+
   const b=e.target.closest("[data-load-blueprint]");if(b)loadBlueprint(Number(b.dataset.loadBlueprint));
   const w=e.target.closest("[data-weapon]");if(w)forgeSystem.showWeapon(state.weapons[Number(w.dataset.weapon)]);
   const tab=e.target.closest("[data-editor-tab]");if(tab){activeEditorTab=tab.dataset.editorTab;document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===tab));renderAdvancedPanel();}

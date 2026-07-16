@@ -15,7 +15,7 @@
     <p class="sub">FORGE OF LEGENDS</p>
     <p class="slogan">魂を打て。<br>世界に一本だけの武器を。</p>
     <button class="primary" id="enterButton">鍛冶場へ入る</button>
-    <small class="version">Ver0.6 Smooth Slider Hotfix</small>
+    <small class="version">Ver0.6 Part Editor Foundation</small>
   </section>
 
   <section id="home" class="screen">
@@ -47,6 +47,17 @@
 
     <div class="card">
       <div class="type-grid" id="weaponTypes"></div>
+
+      <section class="part-editor-panel">
+        <div class="part-editor-heading">
+          <div>
+            <small>WEAPON PARTS</small>
+            <strong id="activePartLabel">刀身</strong>
+          </div>
+          <span id="partCountLabel">1/4</span>
+        </div>
+        <div id="weaponPartList" class="weapon-part-list"></div>
+      </section>
 
       <div class="editor-panel" id="editorPanel">
         <div class="canvas-toolbar">
