@@ -44,7 +44,28 @@ const maxForges=()=>3;
 const remaining=()=>Math.max(0,maxForges()-state.used);
 
 function resetDaily(){const key=dayKey();if(state.day!==key){state.day=key;state.used=0;saveState(state)}}
-function go(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));$(id).classList.add("active");document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.go===id));render();scrollTo(0,0)}
+function go(id){
+  const target=$(id);
+
+  if(!target){
+    console.error(`画面 "${id}" が見つかりません。`);
+    toast("画面を開けませんでした");
+    return;
+  }
+
+  document.querySelectorAll(".screen").forEach((screen)=>{
+    screen.classList.remove("active");
+  });
+
+  target.classList.add("active");
+
+  document.querySelectorAll(".nav button").forEach((button)=>{
+    button.classList.toggle("active",button.dataset.go===id);
+  });
+
+  render();
+  scrollTo(0,0);
+}
 function enter(){ $("nav").style.display="grid";go("home") }
 
 
@@ -342,8 +363,16 @@ function renderOreInventory(){
     </button>`;
   }).join("");
 
-  $("oreUsedSlots").textContent=String(oreInventory.getUsedSlotCount());
-  $("oreFreeSlots").textContent=String(oreInventory.getFreeSlotCount());
+  const usedLabel=$("oreUsedSlots");
+  const freeLabel=$("oreFreeSlots");
+
+  if(usedLabel){
+    usedLabel.textContent=String(oreInventory.getUsedSlotCount());
+  }
+
+  if(freeLabel){
+    freeLabel.textContent=String(oreInventory.getFreeSlotCount());
+  }
 
   const testHost=$("oreTestButtons");
   if(testHost){

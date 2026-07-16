@@ -15,7 +15,7 @@
     <p class="sub">FORGE OF LEGENDS</p>
     <p class="slogan">魂を打て。<br>世界に一本だけの武器を。</p>
     <button class="primary" id="enterButton">鍛冶場へ入る</button>
-    <small class="version">Ver0.6 Ore Inventory</small>
+    <small class="version">Ver0.6 Ore Inventory Fixed</small>
   </section>
 
   <section id="home" class="screen">
@@ -198,12 +198,38 @@
     <div class="weapon-grid" id="inventoryGrid"></div>
   </section>
 
+
+  <section id="ores" class="screen">
+    <header class="topbar">
+      <div>
+        <small class="screen-kicker">MATERIAL STORAGE</small>
+        <strong>鉱石インベントリ</strong>
+      </div>
+      <span class="pill"><b id="oreUsedSlots">0</b>/64</span>
+    </header>
+
+    <div class="ore-summary">
+      <span>1スロット最大 <b>10個</b></span>
+      <span>空き <b id="oreFreeSlots">64</b>スロット</span>
+    </div>
+
+    <div class="card ore-inventory-card">
+      <div id="oreInventoryGrid" class="ore-inventory-grid"></div>
+    </div>
+
+    <details class="ore-test-panel">
+      <summary>開発用：鉱石を追加</summary>
+      <p>動作確認用です。正式な探索システム実装後に削除できます。</p>
+      <div id="oreTestButtons" class="ore-test-buttons"></div>
+    </details>
+  </section>
+
   <nav class="nav" id="nav">
     <button data-go="home">ホーム</button>
     <button data-go="forge">自由鍛造</button>
     <button data-go="blueprints">設計図</button>
     <button data-go="inventory">保管庫</button>
-      <button data-go="ores">鉱石</button>
+    <button data-go="ores">鉱石</button>
   </nav>
 
   <div id="modal" class="modal">
