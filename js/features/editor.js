@@ -237,6 +237,29 @@ export function drawLayeredEditor(
   // First render active part using existing renderer.
   drawEditor(svg, active.shape, selectedIndex, `${typeName}・${active.label}`);
 
+
+  const activeTransform = active.transform || {};
+  const activeTx = Number(activeTransform.x) || 0;
+  const activeTy = Number(activeTransform.y) || 0;
+  const activeRotation = Number(activeTransform.rotation) || 0;
+  const activeScaleX = Number(activeTransform.scaleX) || 1;
+  const activeScaleY = Number(activeTransform.scaleY) || 1;
+
+  const movableNodes = [...svg.children].filter((node) =>
+    node.tagName !== "defs" &&
+    node.tagName !== "text"
+  );
+
+  const activeGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  activeGroup.setAttribute("class", "active-part-transform");
+  activeGroup.setAttribute(
+    "transform",
+    `translate(${activeTx} ${activeTy}) rotate(${activeRotation} 500 180) scale(${activeScaleX} ${activeScaleY})`
+  );
+
+  movableNodes.forEach((node) => activeGroup.appendChild(node));
+  svg.appendChild(activeGroup);
+
   // Capture active editor groups, then prepend non-active visible parts as passive layers.
   const passiveLayers = parts
     .filter((part) => part.visible && part.id !== activePartId)
@@ -248,14 +271,19 @@ export function drawLayeredEditor(
       const overlayGroup = temp.querySelector(".weapon-type-overlay");
 
       const opacity = 0.34 + Math.min(0.28, index * 0.05);
-      const transformY = (index - (parts.length - 1) / 2) * 4;
+      const t = part.transform || {};
+      const tx = Number(t.x) || 0;
+      const ty = Number(t.y) || 0;
+      const rotation = Number(t.rotation) || 0;
+      const scaleX = Number(t.scaleX) || 1;
+      const scaleY = Number(t.scaleY) || 1;
 
       return `
         <g
           class="passive-part-layer"
           data-passive-part="${part.id}"
           opacity="${opacity}"
-          transform="translate(0 ${transformY})"
+          transform="translate(${tx} ${ty}) rotate(${rotation} 500 180) scale(${scaleX} ${scaleY})"
           pointer-events="none"
         >
           ${weaponPath ? weaponPath.outerHTML : ""}

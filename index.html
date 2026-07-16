@@ -15,7 +15,7 @@
     <p class="sub">FORGE OF LEGENDS</p>
     <p class="slogan">魂を打て。<br>世界に一本だけの武器を。</p>
     <button class="primary" id="enterButton">鍛冶場へ入る</button>
-    <small class="version">Ver0.6 Phase 2-2 Layered Parts</small>
+    <small class="version">Ver0.6 Socket Transform Editor</small>
   </section>
 
   <section id="home" class="screen">
@@ -59,7 +59,47 @@
         <div id="weaponPartList" class="weapon-part-list"></div>
       </section>
 
-      <div class="editor-panel" id="editorPanel">
+      
+      <section class="part-transform-panel">
+        <div class="transform-heading">
+          <strong>PART TRANSFORM</strong>
+          <button type="button" id="resetPartTransform" class="secondary compact">リセット</button>
+        </div>
+
+        <div class="transform-grid">
+          <label>
+            <span>位置X</span>
+            <input type="range" min="-500" max="500" step="1" value="0" data-part-transform="x">
+            <b data-transform-value="x">0</b>
+          </label>
+          <label>
+            <span>位置Y</span>
+            <input type="range" min="-250" max="250" step="1" value="0" data-part-transform="y">
+            <b data-transform-value="y">0</b>
+          </label>
+          <label>
+            <span>回転</span>
+            <input type="range" min="-180" max="180" step="1" value="0" data-part-transform="rotation">
+            <b data-transform-value="rotation">0°</b>
+          </label>
+          <label>
+            <span>横スケール</span>
+            <input type="range" min="10" max="250" step="1" value="100" data-part-transform="scaleX">
+            <b data-transform-value="scaleX">100%</b>
+          </label>
+          <label>
+            <span>縦スケール</span>
+            <input type="range" min="10" max="250" step="1" value="100" data-part-transform="scaleY">
+            <b data-transform-value="scaleY">100%</b>
+          </label>
+          <label>
+            <span>接続先</span>
+            <select id="partSocketSelect" data-part-socket></select>
+          </label>
+        </div>
+      </section>
+
+<div class="editor-panel" id="editorPanel">
         <div class="canvas-toolbar">
           <div class="canvas-status">
             <span class="canvas-live-dot"></span>

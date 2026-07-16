@@ -125,6 +125,42 @@ function bindCanvasControls(){
 }
 
 
+
+function renderPartTransformControls(){
+  const transform=partSystem.getActiveTransform();
+
+  document.querySelectorAll("[data-part-transform]").forEach((input)=>{
+    const key=input.dataset.partTransform;
+    const value=(key==="scaleX"||key==="scaleY")
+      ? Math.round((Number(transform[key])||1)*100)
+      : Math.round(Number(transform[key])||0);
+    input.value=String(value);
+  });
+
+  document.querySelectorAll("[data-transform-value]").forEach((label)=>{
+    const key=label.dataset.transformValue;
+    if(key==="scaleX"||key==="scaleY"){
+      label.textContent=`${Math.round((Number(transform[key])||1)*100)}%`;
+    }else if(key==="rotation"){
+      label.textContent=`${Math.round(Number(transform[key])||0)}°`;
+    }else{
+      label.textContent=String(Math.round(Number(transform[key])||0));
+    }
+  });
+
+  const socketSelect=$("partSocketSelect");
+  if(socketSelect){
+    const parts=partSystem.getAllParts(shape);
+    socketSelect.innerHTML=[
+      `<option value="root">ROOT</option>`,
+      ...parts
+        .filter((part)=>part.id!==partSystem.activePartId)
+        .map((part)=>`<option value="${part.id}">${part.label}</option>`)
+    ].join("");
+    socketSelect.value=transform.socket||"root";
+  }
+}
+
 function renderWeaponParts(){
   const host=$("weaponPartList");
   if(!host)return;
@@ -286,7 +322,7 @@ function render(){
   $("forgeRemaining").textContent=`${remaining()}/${maxForges()}`;
   $("forgeCounter").textContent=`${remaining()}/${maxForges()}`;
   $("heroWeapon").textContent=state.weapons[0]?.icon||"⚔️";
-  renderTypes();renderWeaponParts();renderControls();renderBlueprints();renderInventory();
+  renderTypes();renderWeaponParts();renderPartTransformControls();renderControls();renderBlueprints();renderInventory();
   drawLayeredEditor(
     $("weaponEditor"),
     partSystem.getAllParts(shape),
@@ -674,6 +710,28 @@ document.addEventListener("click",e=>{
 document.addEventListener("input",(e)=>{
   const target=e.target;
 
+
+  const transformKey=target.dataset?.partTransform;
+  if(transformKey){
+    const raw=Number(target.value);
+    const patch={
+      [transformKey]:
+        (transformKey==="scaleX"||transformKey==="scaleY")
+          ? raw/100
+          : raw
+    };
+    partSystem.updateActiveTransform(patch,shape);
+    updateEditorPreviewOnly();
+    renderPartTransformControls();
+    return;
+  }
+
+  if(target.hasAttribute("data-part-socket")){
+    partSystem.updateActiveTransform({socket:target.value},shape);
+    updateEditorPreviewOnly();
+    return;
+  }
+
   const shapeKey=target.dataset?.shape;
   if(shapeKey){
     shape[shapeKey]=Number(target.value);
@@ -721,15 +779,23 @@ document.addEventListener("input",(e)=>{
 });
 
 document.addEventListener("pointerdown",(event)=>{
-  if(event.target.matches('input[type="range"], input[type="color"]')){
+  if(event.target.matches('input[type="range"], input[type="color"], [data-part-socket]')){
     pushHistory();
   }
 },{passive:true});
 
 document.addEventListener("change",(event)=>{
-  if(event.target.matches('input[type="range"], input[type="color"]')){
+  if(event.target.matches('input[type="range"], input[type="color"], [data-part-socket]')){
     commitSliderState();
   }
+});
+
+
+$("resetPartTransform")?.addEventListener("click",()=>{
+  pushHistory();
+  partSystem.resetActiveTransform(shape);
+  render();
+  toast("パーツ位置をリセットしました");
 });
 
 $("enterButton").onclick=enter;$("undoShape").onclick=undo;$("redoShape").onclick=redo;$("addPoint").onclick=addPoint;$("removePoint").onclick=removePoint;$("smoothPoint").onclick=smoothPoint;$("cornerPoint").onclick=cornerPoint;$("mirrorShape").onclick=mirror;$("duplicatePoint").onclick=duplicateSelectedPoint;$("resetShape").onclick=reset;$("saveBlueprint").onclick=()=>saveBlueprint();$("saveBlueprintFromForge").onclick=()=>saveBlueprint(`${TYPES[selectedType].name}設計図`);$("startForge").onclick=()=>forgeSystem.start();$("advanceForge").onclick=()=>forgeSystem.advance();

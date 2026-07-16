@@ -123,6 +123,17 @@ export class WeaponPartSystem {
       order: definitions.map((definition) => definition.id),
       visibility: Object.fromEntries(definitions.map((definition) => [definition.id, true])),
       locked: Object.fromEntries(definitions.map((definition) => [definition.id, false])),
+      transforms: Object.fromEntries(definitions.map((definition, index) => [
+        definition.id,
+        {
+          x: index === 0 ? 0 : -220 - index * 70,
+          y: 0,
+          rotation: 0,
+          scaleX: 1,
+          scaleY: 1,
+          socket: index === 0 ? "root" : definitions[Math.max(0, index - 1)].id
+        }
+      ])),
       parts
     });
 
@@ -189,7 +200,8 @@ export class WeaponPartSystem {
           icon: definition?.icon || "◆",
           shape: cloneShape(state.parts[partId]),
           visible: state.visibility[partId] !== false,
-          locked: state.locked[partId] === true
+          locked: state.locked[partId] === true,
+          transform: { ...state.transforms[partId] }
         };
       })
     };
@@ -209,6 +221,14 @@ export class WeaponPartSystem {
         });
         state.visibility[item.id] = item.visible !== false;
         state.locked[item.id] = item.locked === true;
+        state.transforms[item.id] = {
+          x: Number(item.transform?.x) || 0,
+          y: Number(item.transform?.y) || 0,
+          rotation: Number(item.transform?.rotation) || 0,
+          scaleX: Number(item.transform?.scaleX) || 1,
+          scaleY: Number(item.transform?.scaleY) || 1,
+          socket: item.transform?.socket || "root"
+        };
       }
     });
 
@@ -255,7 +275,8 @@ export class WeaponPartSystem {
         visible: state.visibility[partId] !== false,
         locked: state.locked[partId] === true,
         active: partId === this.activePartId,
-        layerIndex
+        layerIndex,
+        transform: { ...state.transforms[partId] }
       };
     });
   }
@@ -294,6 +315,47 @@ export class WeaponPartSystem {
 
     const [item] = state.order.splice(index, 1);
     state.order.splice(nextIndex, 0, item);
+  }
+
+  getActiveTransform() {
+    const state = this.getState();
+    return { ...(state.transforms[this.activePartId] || {
+      x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, socket: "root"
+    }) };
+  }
+
+  updateActiveTransform(patch, currentShape) {
+    this.saveCurrentShape(currentShape);
+    const state = this.getState();
+    const current = state.transforms[this.activePartId] || {
+      x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, socket: "root"
+    };
+
+    state.transforms[this.activePartId] = {
+      ...current,
+      ...patch,
+      x: Number(patch.x ?? current.x),
+      y: Number(patch.y ?? current.y),
+      rotation: Number(patch.rotation ?? current.rotation),
+      scaleX: Math.max(.1, Number(patch.scaleX ?? current.scaleX)),
+      scaleY: Math.max(.1, Number(patch.scaleY ?? current.scaleY)),
+      socket: patch.socket ?? current.socket
+    };
+  }
+
+  resetActiveTransform(currentShape) {
+    this.saveCurrentShape(currentShape);
+    const state = this.getState();
+    state.transforms[this.activePartId] = {
+      x: 0,
+      y: 0,
+      rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
+      socket: this.activePartId === state.order[0]
+        ? "root"
+        : state.order[Math.max(0, state.order.indexOf(this.activePartId) - 1)]
+    };
   }
 
 }
