@@ -1797,3 +1797,24 @@ input[type="range"]:active{
 /* Phase 3-2 Ribbon Sync Fix */
 #weapon3DStatus[data-state="ok"]{color:#69d99a;}
 #weapon3DStatus[data-state="warning"]{color:#efb761;}
+
+
+/* CAD Mesh Engine */
+.weapon-3d-panel{
+  border-color:#4b5b70;
+  box-shadow:
+    inset 0 0 0 1px rgba(111,220,160,.04),
+    0 20px 60px rgba(0,0,0,.18);
+}
+
+.weapon-3d-toolbar small{
+  color:#62e5a0;
+}
+
+#weapon3DStatus[data-level="ok"]{
+  color:#62e5a0;
+}
+
+#weapon3DStatus[data-level="warning"]{
+  color:#ffb15d;
+}
