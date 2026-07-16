@@ -414,7 +414,12 @@ function bindPointEditing(){
 function bindEditor(){
   const svg=$("weaponEditor");
   svg.addEventListener("pointerdown",e=>{
-    const h=e.target.closest("[data-handle]"),a=e.target.closest(".anchor"),w=e.target.closest("[data-width-index]"),t=h||a||w;if(!t)return;
+    const h=e.target.closest("[data-handle]");
+    const w=e.target.closest("[data-width-index]");
+    const a=e.target.closest("[data-index]:not([data-handle]):not([data-width-index])");
+    const t=h||w||a;
+    if(!t)return;
+
     pushHistory();
     dragIndex=Number(t.dataset.index??t.dataset.widthIndex);
     selectedPoint=dragIndex;

@@ -398,3 +398,20 @@ h1{font-size:48px;line-height:.9;letter-spacing:.1em;margin:0}
 .weapon-card{
   min-height:176px;
 }
+
+
+/* Phase 2-1 Hotfix */
+#advanceForge:disabled{
+  cursor:not-allowed;
+  opacity:.55;
+  filter:saturate(.45);
+  box-shadow:none;
+}
+
+.editor-hit-target.anchor-hit{
+  cursor:grab;
+}
+
+.editor-hit-target.anchor-hit:active{
+  cursor:grabbing;
+}

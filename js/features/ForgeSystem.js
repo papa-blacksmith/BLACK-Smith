@@ -31,6 +31,8 @@ export class ForgeSystem {
     this.context = null;
     this.step = 0;
     this.quality = 50;
+    this.completed = false;
+    this.advancing = false;
 
     this.stepNames = ["加熱", "鍛打", "成形", "焼入れ", "仕上げ", "完成"];
     this.stepTexts = [
@@ -81,6 +83,8 @@ export class ForgeSystem {
 
     this.step = 0;
     this.quality = 50;
+    this.completed = false;
+    this.advancing = false;
 
     this.go("process");
     this.renderProcess();
@@ -110,10 +114,17 @@ export class ForgeSystem {
     }
 
     if (advanceButton) {
-      advanceButton.textContent =
-        this.step === this.stepNames.length - 1
+      advanceButton.textContent = this.completed
+        ? "鍛造完了"
+        : this.step === this.stepNames.length - 1
           ? "完成させる"
           : `${this.stepNames[this.step]}する`;
+
+      advanceButton.disabled = this.completed || this.advancing;
+      advanceButton.setAttribute(
+        "aria-disabled",
+        String(this.completed || this.advancing)
+      );
     }
 
     if (processIcon) {
@@ -136,43 +147,66 @@ export class ForgeSystem {
       return;
     }
 
-    this.quality = Math.min(
-      100,
-      this.quality + Math.floor(Math.random() * 8) + 4
-    );
-
-    if (this.step < this.stepNames.length - 1) {
-      this.step += 1;
-      this.renderProcess();
+    if (this.completed || this.advancing) {
       return;
     }
 
-    const rarity = this.rollRarity();
-    const state = this.getState();
+    this.advancing = true;
+    this.renderProcess();
 
-    const weapon = {
-      id: String(Date.now()),
-      name:
-        ["黒鉄", "灼熱", "蒼雷", "月影"][Math.floor(Math.random() * 4)] +
-        "の" +
-        this.context.type.name,
-      type: this.context.type.name,
-      icon: this.context.type.icon,
-      rarity: rarity.name,
-      color: rarity.color,
-      attack: Math.round(
-        (80 + Math.random() * 70) * rarity.multiplier
-      ),
-      quality: this.quality,
-      shape: this.context.shape,
-      shapeId: this.fingerprint(this.context.shape)
-    };
+    try {
+      this.quality = Math.min(
+        100,
+        this.quality + Math.floor(Math.random() * 8) + 4
+      );
 
-    state.weapons.unshift(weapon);
-    state.used += 1;
+      if (this.step < this.stepNames.length - 1) {
+        this.step += 1;
+        return;
+      }
 
-    this.saveState();
-    this.showWeapon(weapon);
+      const rarity = this.rollRarity();
+      const state = this.getState();
+
+      if (this.getRemaining() <= 0) {
+        this.toast("本日の鍛造回数を使い切りました");
+        return;
+      }
+
+      if (state.weapons.length >= 14) {
+        this.toast("保管庫が満杯です");
+        return;
+      }
+
+      const weapon = {
+        id: `${Date.now()}-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`,
+        name:
+          ["黒鉄", "灼熱", "蒼雷", "月影"][Math.floor(Math.random() * 4)] +
+          "の" +
+          this.context.type.name,
+        type: this.context.type.name,
+        icon: this.context.type.icon,
+        rarity: rarity.name,
+        color: rarity.color,
+        attack: Math.round(
+          (80 + Math.random() * 70) * rarity.multiplier
+        ),
+        quality: this.quality,
+        shape: structuredClone(this.context.shape),
+        shapeId: this.fingerprint(this.context.shape),
+        forgedAt: new Date().toISOString()
+      };
+
+      state.weapons.unshift(weapon);
+      state.used += 1;
+
+      this.completed = true;
+      this.saveState();
+      this.showWeapon(weapon);
+    } finally {
+      this.advancing = false;
+      this.renderProcess();
+    }
   }
 
   showWeapon(weapon) {
