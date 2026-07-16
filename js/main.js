@@ -113,7 +113,7 @@ function renderTypes(){
 function renderControls(){
   const controls=[["width","全体幅",10,100],["thickness","厚み",5,100],["tip","刃先",0,100],["curve","反り",0,100]];
   $("shapeControls").innerHTML=`<div class="shape-grid">${controls.map(([k,l,min,max])=>`
-    <div class="shape-control"><label><span>${l}</span><b>${Math.round(shape[k])}</b></label>
+    <div class="shape-control"><label><span>${l}</span><b data-live-shape="${k}">${Math.round(shape[k])}</b></label>
     <input type="range" min="${min}" max="${max}" value="${shape[k]}" data-shape="${k}"></div>`).join("")}</div>
     <div class="material-row"><select id="material">${["黒鉄","鋼","炎鋼","氷晶鋼","雷鋼","ミスリル"].map(m=>`<option ${shape.material===m?"selected":""}>${m}</option>`).join("")}</select>
     <input id="color" type="color" value="${shape.color}"></div>`;
@@ -127,9 +127,9 @@ function renderAdvancedPanel(){
 
   if(activeEditorTab==="shape"){
     host.innerHTML=`<div class="advanced-panel"><div class="advanced-grid">
-      <div class="advanced-control"><label><span>選択点の局所幅</span><b>${Math.round((p.width||1)*100)}%</b></label><input type="range" min="15" max="220" value="${(p.width||1)*100}" data-point-prop="width"></div>
-      <div class="advanced-control"><label><span>上側幅</span><b>${Math.round((p.upper||1)*100)}%</b></label><input type="range" min="15" max="220" value="${(p.upper||1)*100}" data-point-prop="upper"></div>
-      <div class="advanced-control"><label><span>下側幅</span><b>${Math.round((p.lower||1)*100)}%</b></label><input type="range" min="15" max="220" value="${(p.lower||1)*100}" data-point-prop="lower"></div>
+      <div class="advanced-control"><label><span>選択点の局所幅</span><b data-live-point="width">${Math.round((p.width||1)*100)}%</b></label><input type="range" min="15" max="220" value="${(p.width||1)*100}" data-point-prop="width"></div>
+      <div class="advanced-control"><label><span>上側幅</span><b data-live-point="upper">${Math.round((p.upper||1)*100)}%</b></label><input type="range" min="15" max="220" value="${(p.upper||1)*100}" data-point-prop="upper"></div>
+      <div class="advanced-control"><label><span>下側幅</span><b data-live-point="lower">${Math.round((p.lower||1)*100)}%</b></label><input type="range" min="15" max="220" value="${(p.lower||1)*100}" data-point-prop="lower"></div>
       <div class="advanced-control"><label><span>左右非対称</span><b>${shape.asymmetric?"ON":"OFF"}</b></label><button class="secondary" data-toggle-asymmetry>${shape.asymmetric?"対称に戻す":"非対称にする"}</button></div>
     </div></div>`;
   }else if(activeEditorTab==="edge"){
@@ -146,7 +146,7 @@ function renderAdvancedPanel(){
         ${[["none","なし"],["gem","宝石"],["wing","翼"],["ring","リング"],["chain","チェーン"]].map(([v,l])=>`<option value="${v}" ${shape.ornamentType===v?"selected":""}>${l}</option>`).join("")}</select></div>
       <div class="advanced-control"><label><span>装飾サイズ</span><b>${Math.round(shape.ornamentSize)}</b></label><input type="range" min="0" max="100" value="${shape.ornamentSize}" data-shape="ornamentSize"></div>
       <div class="advanced-control"><label><span>発光</span><b>${Math.round(shape.glow)}</b></label><input type="range" min="0" max="100" value="${shape.glow}" data-shape="glow"></div>
-      <div class="advanced-control"><label><span>ズーム</span><b>${Math.round(shape.zoom*100)}%</b></label><input type="range" min="65" max="180" value="${shape.zoom*100}" data-shape-zoom></div>
+      <div class="advanced-control"><label><span>ズーム</span><b data-live-zoom>${Math.round(shape.zoom*100)}%</b></label><input type="range" min="65" max="180" value="${shape.zoom*100}" data-shape-zoom></div>
     </div></div>`;
   }else{
     host.innerHTML=`<div class="advanced-panel"><div class="preset-grid">
@@ -154,6 +154,33 @@ function renderAdvancedPanel(){
     </div></div>`;
   }
 }
+
+function updateEditorPreviewOnly(){
+  scheduleEditorFrame();
+
+  document.querySelectorAll("[data-live-shape]").forEach((label)=>{
+    const key=label.dataset.liveShape;
+    label.textContent=String(Math.round(Number(shape[key])||0));
+  });
+
+  const point=shape.points[selectedPoint]||shape.points[0];
+  document.querySelectorAll("[data-live-point]").forEach((label)=>{
+    const key=label.dataset.livePoint;
+    label.textContent=`${Math.round((Number(point?.[key])||1)*100)}%`;
+  });
+
+  const zoomLabel=document.querySelector("[data-live-zoom]");
+  if(zoomLabel)zoomLabel.textContent=`${Math.round((Number(shape.zoom)||1)*100)}%`;
+}
+
+function commitSliderState(){
+  editorCore?.updateExternalDocument?.({
+    version:1,
+    weaponType:selectedType,
+    shape:normalizeShape(shape)
+  });
+}
+
 function renderBlueprints(){
   $("blueprintCount").textContent=state.blueprints.length;
   $("blueprintList").innerHTML=state.blueprints.map((b,i)=>`<button class="card menu" data-load-blueprint="${i}">
@@ -472,13 +499,66 @@ document.addEventListener("click",e=>{
   const asym=e.target.closest("[data-toggle-asymmetry]");if(asym){pushHistory();shape.asymmetric=!shape.asymmetric;render();}
   if(e.target===$("modal"))$("modal").classList.remove("show");
 });
-document.addEventListener("input",e=>{
-  const k=e.target.dataset?.shape;if(k){pushHistory();shape[k]=Number(e.target.value);render()}
-  const prop=e.target.dataset?.pointProp;if(prop){pushHistory();shape.points[selectedPoint][prop]=Number(e.target.value)/100;render()}
-  const select=e.target.dataset?.shapeSelect;if(select){pushHistory();shape[select]=e.target.value;render()}
-  if(e.target.hasAttribute("data-shape-zoom")){pushHistory();shape.zoom=Number(e.target.value)/100;render()}
-  if(e.target.id==="material"){pushHistory();shape.material=e.target.value;render()}
-  if(e.target.id==="color"){pushHistory();shape.color=e.target.value;render()}
+document.addEventListener("input",(e)=>{
+  const target=e.target;
+
+  const shapeKey=target.dataset?.shape;
+  if(shapeKey){
+    shape[shapeKey]=Number(target.value);
+    updateEditorPreviewOnly();
+    return;
+  }
+
+  const pointProperty=target.dataset?.pointProp;
+  if(pointProperty){
+    const point=shape.points[selectedPoint];
+    if(point){
+      point[pointProperty]=Number(target.value)/100;
+      updateEditorPreviewOnly();
+    }
+    return;
+  }
+
+  const selectKey=target.dataset?.shapeSelect;
+  if(selectKey){
+    pushHistory();
+    shape[selectKey]=target.value;
+    updateEditorPreviewOnly();
+    commitSliderState();
+    return;
+  }
+
+  if(target.hasAttribute("data-shape-zoom")){
+    shape.zoom=Number(target.value)/100;
+    updateEditorPreviewOnly();
+    return;
+  }
+
+  if(target.id==="material"){
+    pushHistory();
+    shape.material=target.value;
+    updateEditorPreviewOnly();
+    commitSliderState();
+    return;
+  }
+
+  if(target.id==="color"){
+    shape.color=target.value;
+    updateEditorPreviewOnly();
+  }
 });
+
+document.addEventListener("pointerdown",(event)=>{
+  if(event.target.matches('input[type="range"], input[type="color"]')){
+    pushHistory();
+  }
+},{passive:true});
+
+document.addEventListener("change",(event)=>{
+  if(event.target.matches('input[type="range"], input[type="color"]')){
+    commitSliderState();
+  }
+});
+
 $("enterButton").onclick=enter;$("undoShape").onclick=undo;$("redoShape").onclick=redo;$("addPoint").onclick=addPoint;$("removePoint").onclick=removePoint;$("smoothPoint").onclick=smoothPoint;$("cornerPoint").onclick=cornerPoint;$("mirrorShape").onclick=mirror;$("duplicatePoint").onclick=duplicateSelectedPoint;$("resetShape").onclick=reset;$("saveBlueprint").onclick=()=>saveBlueprint();$("saveBlueprintFromForge").onclick=()=>saveBlueprint(`${TYPES[selectedType].name}設計図`);$("startForge").onclick=()=>forgeSystem.start();$("advanceForge").onclick=()=>forgeSystem.advance();
 bindEditor();bindPointEditing();initializeEditorCore();bindCanvasControls();resetDaily();render();

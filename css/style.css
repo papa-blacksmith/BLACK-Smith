@@ -415,3 +415,25 @@ h1{font-size:48px;line-height:.9;letter-spacing:.1em;margin:0}
 .editor-hit-target.anchor-hit:active{
   cursor:grabbing;
 }
+
+
+/* Smooth Slider Hotfix */
+input[type="range"]{
+  touch-action:pan-x;
+  cursor:grab;
+}
+
+input[type="range"]:active{
+  cursor:grabbing;
+}
+
+.shape-control input[type="range"],
+.advanced-control input[type="range"]{
+  min-height:28px;
+}
+
+@media(pointer:coarse){
+  input[type="range"]{
+    min-height:38px;
+  }
+}
