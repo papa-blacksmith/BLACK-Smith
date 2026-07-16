@@ -11,6 +11,7 @@ let state=loadState(),shape=cloneShape(DEFAULT_SHAPE),selectedType=0,selectedPoi
 let dragIndex=null,dragHandle=null,dragWidth=false;
 let editorFramePending=false;
 let contextWorldPoint=null;
+let renameTargetPartId=null;
 let activeEditorTab="shape";
 let undoStack=[],redoStack=[];
 let editorCore=null;
@@ -171,10 +172,16 @@ function renderWeaponParts(){
   if(!host)return;
 
   const parts=partSystem.getAllParts(shape);
-  const activeIndex=Math.max(0,parts.findIndex((part)=>part.id===partSystem.activePartId));
+  const activeIndex=Math.max(
+    0,
+    parts.findIndex((part)=>part.id===partSystem.activePartId)
+  );
 
   host.innerHTML=parts.map((part,index)=>`
-    <div class="weapon-part-row ${part.active?"active":""} ${part.locked?"locked":""}">
+    <div
+      class="weapon-part-row ${part.active?"active":""} ${part.locked?"locked":""}"
+      data-outliner-row="${part.id}"
+    >
       <button
         type="button"
         class="weapon-part-button ${part.active?"active":""}"
@@ -205,6 +212,28 @@ function renderWeaponParts(){
         <button
           type="button"
           class="part-mini-button"
+          data-part-rename="${part.id}"
+          title="名前変更"
+        >✎</button>
+
+        <button
+          type="button"
+          class="part-mini-button"
+          data-part-duplicate="${part.id}"
+          title="複製"
+        >⧉</button>
+
+        <button
+          type="button"
+          class="part-mini-button danger"
+          data-part-delete="${part.id}"
+          title="削除"
+          ${parts.length<=1?"disabled":""}
+        >×</button>
+
+        <button
+          type="button"
+          class="part-mini-button"
           data-part-move="${part.id}"
           data-direction="-1"
           title="前面へ"
@@ -223,14 +252,60 @@ function renderWeaponParts(){
     </div>
   `).join("");
 
+  const active=parts.find((part)=>part.active);
+
   const label=$("activePartLabel");
   if(label){
-    const active=parts.find((part)=>part.active);
-    label.textContent=`${active?.label||"パーツ"}${active?.locked?"（ロック中）":""}`;
+    label.textContent=
+      `${active?.label||"パーツ"}${active?.locked?"（ロック中）":""}`;
   }
 
   const count=$("partCountLabel");
   if(count)count.textContent=`${activeIndex+1}/${parts.length}`;
+}
+
+
+function openPartRename(partId){
+  const part=partSystem.getAllParts(shape).find((item)=>item.id===partId);
+  if(!part)return;
+
+  renameTargetPartId=partId;
+
+  const modal=$("partRenameModal");
+  const input=$("partRenameInput");
+
+  if(input){
+    input.value=part.label;
+    requestAnimationFrame(()=>{
+      input.focus();
+      input.select();
+    });
+  }
+
+  modal?.classList.add("show");
+  modal?.setAttribute("aria-hidden","false");
+}
+
+function closePartRename(){
+  renameTargetPartId=null;
+  $("partRenameModal")?.classList.remove("show");
+  $("partRenameModal")?.setAttribute("aria-hidden","true");
+}
+
+function confirmPartRename(){
+  if(!renameTargetPartId)return closePartRename();
+
+  const value=$("partRenameInput")?.value||"";
+  pushHistory();
+
+  if(partSystem.renamePart(renameTargetPartId,value,shape)){
+    render();
+    toast("パーツ名を変更しました");
+  }else{
+    toast("パーツ名を入力してください");
+  }
+
+  closePartRename();
 }
 
 function renderTypes(){
@@ -801,6 +876,26 @@ $("resetPartTransform")?.addEventListener("click",()=>{
   editorCore?.camera.reset();
   render();
   toast("パーツ位置と表示をリセットしました");
+});
+
+
+$("cancelPartRename")?.addEventListener("click",closePartRename);
+$("confirmPartRename")?.addEventListener("click",confirmPartRename);
+
+$("partRenameInput")?.addEventListener("keydown",(event)=>{
+  if(event.code==="Enter"){
+    event.preventDefault();
+    confirmPartRename();
+  }
+
+  if(event.code==="Escape"){
+    event.preventDefault();
+    closePartRename();
+  }
+});
+
+$("partRenameModal")?.addEventListener("click",(event)=>{
+  if(event.target===$("partRenameModal"))closePartRename();
 });
 
 $("enterButton").onclick=enter;$("undoShape").onclick=undo;$("redoShape").onclick=redo;$("addPoint").onclick=addPoint;$("removePoint").onclick=removePoint;$("smoothPoint").onclick=smoothPoint;$("cornerPoint").onclick=cornerPoint;$("mirrorShape").onclick=mirror;$("duplicatePoint").onclick=duplicateSelectedPoint;$("resetShape").onclick=reset;$("saveBlueprint").onclick=()=>saveBlueprint();$("saveBlueprintFromForge").onclick=()=>saveBlueprint(`${TYPES[selectedType].name}設計図`);$("startForge").onclick=()=>forgeSystem.start();$("advanceForge").onclick=()=>forgeSystem.advance();

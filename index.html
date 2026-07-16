@@ -15,7 +15,7 @@
     <p class="sub">FORGE OF LEGENDS</p>
     <p class="slogan">魂を打て。<br>世界に一本だけの武器を。</p>
     <button class="primary" id="enterButton">鍛冶場へ入る</button>
-    <small class="version">Ver0.6 Renderer Rollback Fix</small>
+    <small class="version">Ver0.6 Part Outliner</small>
   </section>
 
   <section id="home" class="screen">
@@ -205,6 +205,18 @@
   </div>
 
   <div id="toast" class="toast"></div>
+
+  <div id="partRenameModal" class="part-rename-modal" aria-hidden="true">
+    <div class="part-rename-sheet">
+      <h3>パーツ名を変更</h3>
+      <input id="partRenameInput" type="text" maxlength="24" autocomplete="off">
+      <div class="part-rename-actions">
+        <button type="button" class="secondary" id="cancelPartRename">キャンセル</button>
+        <button type="button" class="primary" id="confirmPartRename">変更する</button>
+      </div>
+    </div>
+  </div>
+
 
   <div id="editorContextMenu" class="editor-context-menu" role="menu" aria-hidden="true">
     <button type="button" data-context-action="add">点を追加</button>

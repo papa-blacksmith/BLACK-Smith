@@ -151,6 +151,10 @@ export class WeaponPartSystem {
           socket: index === 0 ? "root" : definitions[Math.max(0, index - 1)].id
         }
       ])),
+      names: Object.fromEntries(definitions.map((definition) => [
+        definition.id,
+        definition.label
+      ])),
       parts
     });
 
@@ -213,7 +217,7 @@ export class WeaponPartSystem {
         const definition = definitions.find((item) => item.id === partId);
         return {
           id: partId,
-          label: definition?.label || partId,
+          label: state.names[partId] || definition?.label || partId,
           icon: definition?.icon || "◆",
           shape: cloneShape(state.parts[partId]),
           visible: state.visibility[partId] !== false,
@@ -238,6 +242,7 @@ export class WeaponPartSystem {
         });
         state.visibility[item.id] = item.visible !== false;
         state.locked[item.id] = item.locked === true;
+        state.names[item.id] = item.label || state.names[item.id] || item.id;
         state.transforms[item.id] = sanitizeTransform(
           item.transform,
           item.transform?.socket || "root"
@@ -282,7 +287,7 @@ export class WeaponPartSystem {
       const definition = this.getDefinitions().find((item) => item.id === partId);
       return {
         id: partId,
-        label: definition?.label || partId,
+        label: state.names[partId] || definition?.label || partId,
         icon: definition?.icon || "◆",
         shape: cloneShape(state.parts[partId]),
         visible: state.visibility[partId] !== false,
@@ -370,6 +375,85 @@ export class WeaponPartSystem {
         ? "root"
         : state.order[Math.max(0, state.order.indexOf(this.activePartId) - 1)]
     };
+  }
+
+  renamePart(partId, name, currentShape) {
+    this.saveCurrentShape(currentShape);
+    const state = this.getState();
+    if (!state?.parts?.[partId]) return false;
+
+    const cleaned = String(name || "").trim().slice(0, 24);
+    if (!cleaned) return false;
+
+    state.names[partId] = cleaned;
+    return true;
+  }
+
+  duplicatePart(partId, currentShape) {
+    this.saveCurrentShape(currentShape);
+    const state = this.getState();
+    if (!state?.parts?.[partId]) return null;
+
+    const originalIndex = state.order.indexOf(partId);
+    const copyId = `${partId}_copy_${Date.now().toString(36)}`;
+
+    state.parts[copyId] = cloneShape(state.parts[partId]);
+    state.visibility[copyId] = true;
+    state.locked[copyId] = false;
+    state.transforms[copyId] = {
+      ...(state.transforms[partId] || {
+        x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, socket: "root"
+      }),
+      x: Number(state.transforms[partId]?.x || 0) + 18,
+      y: Number(state.transforms[partId]?.y || 0) + 12
+    };
+    state.names[copyId] = `${state.names[partId] || partId} コピー`;
+
+    state.order.splice(
+      Math.max(0, originalIndex + 1),
+      0,
+      copyId
+    );
+
+    state.activePartId = copyId;
+    this.activePartId = copyId;
+
+    return copyId;
+  }
+
+  removePart(partId, currentShape) {
+    this.saveCurrentShape(currentShape);
+    const state = this.getState();
+    if (!state?.parts?.[partId]) return false;
+    if (state.order.length <= 1) return false;
+
+    const index = state.order.indexOf(partId);
+
+    delete state.parts[partId];
+    delete state.visibility[partId];
+    delete state.locked[partId];
+    delete state.transforms[partId];
+    delete state.names[partId];
+
+    state.order = state.order.filter((id) => id !== partId);
+
+    if (state.activePartId === partId) {
+      const nextId =
+        state.order[Math.min(index, state.order.length - 1)] ||
+        state.order[0];
+
+      state.activePartId = nextId;
+      this.activePartId = nextId;
+    }
+
+    return true;
+  }
+
+  getPartShape(partId) {
+    const state = this.getState();
+    return state?.parts?.[partId]
+      ? cloneShape(state.parts[partId])
+      : null;
   }
 
 }

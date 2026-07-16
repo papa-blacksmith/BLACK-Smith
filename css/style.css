@@ -765,3 +765,70 @@ input[type="range"]:active{
   opacity:1;
   visibility:visible;
 }
+
+
+/* Part Outliner */
+.part-row-actions{
+  grid-template-columns:repeat(7,30px);
+}
+
+.part-mini-button.danger{
+  color:#ff9b9b;
+}
+
+.part-mini-button.danger:hover:not(:disabled){
+  border-color:#d85d5d;
+  background:#321c20;
+}
+
+.part-rename-modal{
+  position:fixed;
+  inset:0;
+  z-index:200;
+  display:none;
+  place-items:center;
+  padding:20px;
+  background:rgba(4,7,12,.72);
+  backdrop-filter:blur(7px);
+}
+
+.part-rename-modal.show{
+  display:grid;
+}
+
+.part-rename-sheet{
+  width:min(420px,100%);
+  padding:18px;
+  border:1px solid #3d4858;
+  border-radius:16px;
+  background:#141a23;
+  box-shadow:0 22px 70px rgba(0,0,0,.55);
+}
+
+.part-rename-sheet h3{
+  margin:0 0 13px;
+  color:#efc66e;
+}
+
+.part-rename-sheet input{
+  width:100%;
+  min-height:44px;
+  padding:9px 11px;
+  border:1px solid #3b4656;
+  border-radius:10px;
+  background:#0e131b;
+  color:#fff;
+}
+
+.part-rename-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+  margin-top:13px;
+}
+
+@media(max-width:680px){
+  .part-row-actions{
+    grid-template-columns:repeat(7,1fr);
+  }
+}
