@@ -5,6 +5,7 @@ import { drawEditor, eventToLocal, createExactShapePreview } from "./features/ed
 import { ForgeSystem } from "./features/ForgeSystem.js";
 import { EditorCore } from "./editor/EditorCore.js";
 import { WeaponPartSystem } from "./editor/WeaponPartSystem.js";
+import { Weapon3DPreview } from "./three/Weapon3DPreview.js";
 import {
   OreInventorySystem,
   ORE_DEFINITIONS,
@@ -30,6 +31,7 @@ let editorFramePending=false;
 let contextWorldPoint=null;
 let renameTargetPartId=null;
 let oreInventory=new OreInventorySystem(state.oreInventory);
+let weapon3DPreview=null;
 let selectedForgeOres=Array(5).fill(null);
 let activeEditorTab="shape";
 let undoStack=[],redoStack=[];
@@ -698,6 +700,41 @@ function consumeSelectedForgeOres(){
   return true;
 }
 
+
+function initializeWeapon3DPreview(){
+  const container=$("weapon3DViewport");
+  if(!container||weapon3DPreview)return;
+
+  try{
+    weapon3DPreview=new Weapon3DPreview({
+      container,
+      getShape:()=>normalizeShape(shape),
+      getParts:()=>partSystem.getAllParts(shape)
+    });
+
+    const status=$("weapon3DStatus");
+    if(status)status.textContent="リアルタイム同期";
+
+    $("reset3DView")?.addEventListener("click",()=>{
+      weapon3DPreview?.resetView();
+    });
+  }catch(error){
+    console.error("3Dプレビュー初期化失敗",error);
+    container.innerHTML=`
+      <div class="weapon-3d-error">
+        3Dプレビューを開始できませんでした。<br>
+        ページを更新してください。
+      </div>
+    `;
+    const status=$("weapon3DStatus");
+    if(status)status.textContent="読み込み失敗";
+  }
+}
+
+function updateWeapon3DPreview(){
+  weapon3DPreview?.scheduleUpdate();
+}
+
 function renderTypes(){
   $("weaponTypes").innerHTML=TYPES.map((t,i)=>`<button class="type-button ${i===selectedType?"active":""}" data-type="${i}">${t.icon}<br><small>${t.name}</small></button>`).join("");
 }
@@ -748,6 +785,7 @@ function renderAdvancedPanel(){
 
 function updateEditorPreviewOnly(){
   scheduleEditorFrame();
+  updateWeapon3DPreview();
 
   document.querySelectorAll("[data-live-shape]").forEach((label)=>{
     const key=label.dataset.liveShape;
@@ -792,7 +830,7 @@ function render(){
   $("forgeRemaining").textContent=`${remaining()}/${maxForges()}`;
   $("forgeCounter").textContent=`${remaining()}/${maxForges()}`;
   $("heroWeapon").textContent=state.weapons[0]?.icon||"⚔️";
-  renderTypes();renderWeaponParts();renderPartTransformControls();renderControls();renderBlueprints();renderInventory();renderOreInventory();renderForgeOreSlots();renderOreGacha();
+  renderTypes();renderWeaponParts();renderPartTransformControls();renderControls();renderBlueprints();renderInventory();renderOreInventory();renderForgeOreSlots();renderOreGacha();updateWeapon3DPreview();
   drawEditor(
     $("weaponEditor"),
     normalizeShape(shape),
@@ -1326,4 +1364,4 @@ $("partRenameModal")?.addEventListener("click",(event)=>{
 });
 
 $("enterButton").onclick=enter;$("undoShape").onclick=undo;$("redoShape").onclick=redo;$("addPoint").onclick=addPoint;$("removePoint").onclick=removePoint;$("smoothPoint").onclick=smoothPoint;$("cornerPoint").onclick=cornerPoint;$("mirrorShape").onclick=mirror;$("duplicatePoint").onclick=duplicateSelectedPoint;$("resetShape").onclick=reset;$("saveBlueprint").onclick=()=>saveBlueprint();$("saveBlueprintFromForge").onclick=()=>saveBlueprint(`${TYPES[selectedType].name}設計図`);$("startForge").onclick=()=>forgeSystem.start();$("advanceForge").onclick=()=>forgeSystem.advance();
-bindEditor();bindPointEditing();initializeEditorCore();bindCanvasControls();resetDaily();render();
+bindEditor();bindPointEditing();initializeEditorCore();initializeWeapon3DPreview();bindCanvasControls();resetDaily();render();

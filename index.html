@@ -15,7 +15,7 @@
     <p class="sub">FORGE OF LEGENDS</p>
     <p class="slogan">魂を打て。<br>世界に一本だけの武器を。</p>
     <button class="primary" id="enterButton">鍛冶場へ入る</button>
-    <small class="version">Ver0.6 Exact Inventory Preview Fix</small>
+    <small class="version">Ver0.7 Phase 3-1 3D Mesh</small>
   </section>
 
   <section id="home" class="screen">
@@ -130,6 +130,26 @@
           <span>Home：リセット</span>
         </div>
       </div>
+
+
+      <section class="weapon-3d-panel">
+        <div class="weapon-3d-toolbar">
+          <div>
+            <small>PHASE 3-1</small>
+            <strong>リアルタイム3Dメッシュ</strong>
+          </div>
+          <div class="weapon-3d-actions">
+            <span id="weapon3DStatus">同期中</span>
+            <button type="button" id="reset3DView">表示リセット</button>
+          </div>
+        </div>
+        <div id="weapon3DViewport" class="weapon-3d-viewport">
+          <div class="weapon-3d-loading">3Dエンジンを読み込んでいます…</div>
+        </div>
+        <div class="weapon-3d-help">
+          左ドラッグ：回転　ホイール：ズーム　右ドラッグ：移動
+        </div>
+      </section>
 
       <div class="toolbar">
         <button class="secondary" id="undoShape">↶ Undo</button>
