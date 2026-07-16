@@ -5,6 +5,7 @@ import { drawEditor, eventToLocal, createShapePreview } from "./features/editor.
 import { ForgeSystem } from "./features/ForgeSystem.js";
 import { EditorCore } from "./editor/EditorCore.js";
 import { WeaponPartSystem } from "./editor/WeaponPartSystem.js";
+import { OreInventorySystem, ORE_DEFINITIONS, ORE_INVENTORY_SIZE, ORE_STACK_LIMIT } from "./systems/OreInventorySystem.js";
 
 const $=id=>document.getElementById(id);
 let state=loadState(),shape=cloneShape(DEFAULT_SHAPE),selectedType=0,selectedPoint=0;
@@ -12,6 +13,7 @@ let dragIndex=null,dragHandle=null,dragWidth=false;
 let editorFramePending=false;
 let contextWorldPoint=null;
 let renameTargetPartId=null;
+let oreInventory=new OreInventorySystem(state.oreInventory);
 let activeEditorTab="shape";
 let undoStack=[],redoStack=[];
 let editorCore=null;
@@ -308,6 +310,77 @@ function confirmPartRename(){
   closePartRename();
 }
 
+
+function saveOreInventory(){
+  state.oreInventory=oreInventory.toJSON();
+  saveState(state);
+}
+
+function renderOreInventory(){
+  const grid=$("oreInventoryGrid");
+  if(!grid)return;
+
+  grid.innerHTML=oreInventory.slots.map((slot,index)=>{
+    if(!slot){
+      return `<button class="ore-slot empty" data-ore-slot="${index}" aria-label="空きスロット ${index+1}">
+        <span class="slot-index">${index+1}</span>
+      </button>`;
+    }
+
+    const ore=ORE_DEFINITIONS[slot.oreId]||{
+      name:slot.oreId,
+      icon:"🪨",
+      color:"#b8bcc4",
+      rarity:"UNKNOWN"
+    };
+
+    return `<button class="ore-slot filled" data-ore-slot="${index}" style="--ore-color:${ore.color}">
+      <span class="slot-index">${index+1}</span>
+      <span class="ore-icon">${ore.icon}</span>
+      <span class="ore-name">${ore.name}</span>
+      <span class="ore-stack">${slot.amount}/${ORE_STACK_LIMIT}</span>
+    </button>`;
+  }).join("");
+
+  $("oreUsedSlots").textContent=String(oreInventory.getUsedSlotCount());
+  $("oreFreeSlots").textContent=String(oreInventory.getFreeSlotCount());
+
+  const testHost=$("oreTestButtons");
+  if(testHost){
+    testHost.innerHTML=Object.values(ORE_DEFINITIONS).map((ore)=>`
+      <button type="button" class="secondary ore-add-button" data-add-ore="${ore.id}">
+        ${ore.icon} ${ore.name} +1
+      </button>
+    `).join("");
+  }
+}
+
+function addOreToInventory(oreId,amount=1){
+  const ore=ORE_DEFINITIONS[oreId];
+  const result=oreInventory.addOre(oreId,amount);
+
+  if(result.added>0){
+    saveOreInventory();
+    renderOreInventory();
+    toast(`${ore?.name||oreId}を${result.added}個収納しました`);
+  }
+
+  if(result.overflow>0){
+    toast(`鉱石倉庫が満杯です。${result.overflow}個入りませんでした`);
+  }
+
+  return result;
+}
+
+function removeOreFromInventory(oreId,amount=1){
+  const removed=oreInventory.removeOre(oreId,amount);
+  if(removed>0){
+    saveOreInventory();
+    renderOreInventory();
+  }
+  return removed;
+}
+
 function renderTypes(){
   $("weaponTypes").innerHTML=TYPES.map((t,i)=>`<button class="type-button ${i===selectedType?"active":""}" data-type="${i}">${t.icon}<br><small>${t.name}</small></button>`).join("");
 }
@@ -402,7 +475,7 @@ function render(){
   $("forgeRemaining").textContent=`${remaining()}/${maxForges()}`;
   $("forgeCounter").textContent=`${remaining()}/${maxForges()}`;
   $("heroWeapon").textContent=state.weapons[0]?.icon||"⚔️";
-  renderTypes();renderWeaponParts();renderPartTransformControls();renderControls();renderBlueprints();renderInventory();
+  renderTypes();renderWeaponParts();renderPartTransformControls();renderControls();renderBlueprints();renderInventory();renderOreInventory();
   drawEditor(
     $("weaponEditor"),
     normalizeShape(shape),

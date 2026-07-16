@@ -15,7 +15,7 @@
     <p class="sub">FORGE OF LEGENDS</p>
     <p class="slogan">魂を打て。<br>世界に一本だけの武器を。</p>
     <button class="primary" id="enterButton">鍛冶場へ入る</button>
-    <small class="version">Ver0.6 Part Outliner</small>
+    <small class="version">Ver0.6 Ore Inventory</small>
   </section>
 
   <section id="home" class="screen">
@@ -30,7 +30,12 @@
 
     <button class="primary" data-go="forge">自由鍛造</button>
 
-    <button class="card menu" data-go="blueprints">
+    <button class="card menu" data-go="ores">
+          <span>⛏️</span>
+          <span><b>鉱石倉庫</b><small>64スロット / 10スタック</small></span>
+          <span>›</span>
+        </button>
+        <button class="card menu" data-go="blueprints">
       <span>📜</span><span><b>設計図</b><small>保存・読込・再利用</small></span><span>›</span>
     </button>
 
@@ -198,6 +203,7 @@
     <button data-go="forge">自由鍛造</button>
     <button data-go="blueprints">設計図</button>
     <button data-go="inventory">保管庫</button>
+      <button data-go="ores">鉱石</button>
   </nav>
 
   <div id="modal" class="modal">

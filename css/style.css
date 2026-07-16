@@ -832,3 +832,138 @@ input[type="range"]:active{
     grid-template-columns:repeat(7,1fr);
   }
 }
+
+
+/* Ore Inventory */
+.ore-capacity{
+  min-width:72px;
+  padding:8px 12px;
+  border:1px solid #3a4555;
+  border-radius:999px;
+  color:#f0c873;
+  text-align:center;
+  font-weight:900;
+}
+
+.ore-summary{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  margin:12px 0;
+  padding:10px 12px;
+  border:1px solid #333d4c;
+  border-radius:12px;
+  background:#121821;
+  color:#aeb7c5;
+  font-size:10px;
+}
+
+.ore-inventory-grid{
+  display:grid;
+  grid-template-columns:repeat(8,minmax(0,1fr));
+  gap:5px;
+}
+
+.ore-slot{
+  position:relative;
+  aspect-ratio:1/1;
+  min-width:0;
+  overflow:hidden;
+  border:1px solid #303a49;
+  border-radius:9px;
+  background:#10151d;
+  color:#eef1f5;
+}
+
+.ore-slot.empty{
+  background:
+    linear-gradient(135deg,rgba(255,255,255,.025),transparent),
+    #0d1219;
+}
+
+.ore-slot.filled{
+  border-color:color-mix(in srgb,var(--ore-color) 55%,#303a49);
+  box-shadow:inset 0 0 18px color-mix(in srgb,var(--ore-color) 10%,transparent);
+}
+
+.slot-index{
+  position:absolute;
+  left:4px;
+  top:3px;
+  color:#596474;
+  font-size:7px;
+}
+
+.ore-icon{
+  display:block;
+  font-size:clamp(16px,3vw,28px);
+  line-height:1;
+}
+
+.ore-name{
+  display:block;
+  margin-top:4px;
+  padding:0 2px;
+  overflow:hidden;
+  color:#cbd2dc;
+  font-size:7px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.ore-stack{
+  position:absolute;
+  right:4px;
+  bottom:3px;
+  padding:2px 4px;
+  border-radius:999px;
+  background:rgba(0,0,0,.72);
+  color:#fff;
+  font-size:7px;
+  font-weight:900;
+}
+
+.ore-test-panel{
+  margin-top:14px;
+  padding:12px;
+  border:1px dashed #3a4555;
+  border-radius:12px;
+}
+
+.ore-test-panel > small{
+  display:block;
+  margin-bottom:8px;
+  color:#8792a2;
+}
+
+.ore-test-buttons{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px;
+}
+
+.ore-add-button{
+  min-height:34px;
+  padding:7px;
+  font-size:9px;
+}
+
+@media(max-width:520px){
+  .ore-inventory-grid{
+    gap:3px;
+  }
+
+  .ore-slot{
+    border-radius:6px;
+  }
+
+  .ore-name{
+    display:none;
+  }
+
+  .ore-stack{
+    right:2px;
+    bottom:2px;
+    font-size:6px;
+  }
+}
