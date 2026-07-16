@@ -120,10 +120,14 @@ export function drawEditor(svg,shapeInput,selectedIndex=0,typeName=""){
       ${anchors.map(a=>`
         <line class="handle-line" x1="${a.x}" y1="${a.y}" x2="${a.inX}" y2="${a.inY}"/>
         <line class="handle-line" x1="${a.x}" y1="${a.y}" x2="${a.outX}" y2="${a.outY}"/>
-        <circle class="handle" data-handle="in" data-index="${a.index}" cx="${a.inX}" cy="${a.inY}" r="7" fill="#e6b85e"/>
-        <circle class="handle" data-handle="out" data-index="${a.index}" cx="${a.outX}" cy="${a.outY}" r="7" fill="#e6b85e"/>
-        <circle class="width-handle" data-width-index="${a.index}" cx="${a.x}" cy="${a.y-34*(a.width||1)}" r="7" fill="#59a9ff" stroke="#eaf5ff" stroke-width="2"/>
-        <circle class="anchor ${a.index===selectedIndex?"selected":""}" data-index="${a.index}" cx="${a.x}" cy="${a.y}" r="10" fill="#fff" stroke="#171b24" stroke-width="4"/>
+        <circle class="editor-hit-target" data-handle="in" data-index="${a.index}" cx="${a.inX}" cy="${a.inY}" r="18"/>
+        <circle class="editor-hit-target" data-handle="out" data-index="${a.index}" cx="${a.outX}" cy="${a.outY}" r="18"/>
+        <circle class="editor-hit-target" data-width-index="${a.index}" cx="${a.x}" cy="${a.y-34*(a.width||1)}" r="20"/>
+        <circle class="editor-hit-target anchor-hit" data-index="${a.index}" cx="${a.x}" cy="${a.y}" r="22"/>
+        <circle class="handle" data-handle="in" data-index="${a.index}" cx="${a.inX}" cy="${a.inY}" r="9" fill="#e6b85e"/>
+        <circle class="handle" data-handle="out" data-index="${a.index}" cx="${a.outX}" cy="${a.outY}" r="9" fill="#e6b85e"/>
+        <circle class="width-handle" data-width-index="${a.index}" cx="${a.x}" cy="${a.y-34*(a.width||1)}" r="9" fill="#59a9ff" stroke="#eaf5ff" stroke-width="2.5"/>
+        <circle class="anchor ${a.index===selectedIndex?"selected":""}" data-index="${a.index}" cx="${a.x}" cy="${a.y}" r="13" fill="#fff" stroke="#171b24" stroke-width="4"/>
       `).join("")}
     </g>
     <text x="28" y="36" fill="#e6b85e" font-size="22">${typeName}</text>

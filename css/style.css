@@ -254,3 +254,78 @@ h1{font-size:48px;line-height:.9;letter-spacing:.1em;margin:0}
     height:300px;
   }
 }
+
+
+/* Phase 1 Interaction Boost */
+.editor-hit-target{
+  fill:transparent;
+  stroke:none;
+  pointer-events:all;
+  cursor:grab;
+}
+
+.editor-hit-target:active{
+  cursor:grabbing;
+}
+
+.anchor,
+.handle,
+.width-handle{
+  transition:
+    r .12s ease,
+    filter .12s ease,
+    stroke-width .12s ease;
+  pointer-events:none;
+}
+
+.anchor{
+  filter:drop-shadow(0 0 7px rgba(255,255,255,.45));
+}
+
+.anchor.selected{
+  stroke:#ffcc66;
+  stroke-width:7;
+  filter:
+    drop-shadow(0 0 8px rgba(255,204,102,.9))
+    drop-shadow(0 0 18px rgba(255,204,102,.45));
+}
+
+.handle{
+  filter:drop-shadow(0 0 7px rgba(230,184,94,.75));
+}
+
+.width-handle{
+  filter:drop-shadow(0 0 8px rgba(89,169,255,.85));
+}
+
+.handle-line{
+  stroke-width:2.5;
+  opacity:.9;
+}
+
+.canvas-stage.is-editing{
+  cursor:grabbing;
+}
+
+@media (pointer:coarse){
+  .editor-hit-target[data-index]{
+    r:26;
+  }
+
+  .editor-hit-target[data-handle]{
+    r:23;
+  }
+
+  .editor-hit-target[data-width-index]{
+    r:25;
+  }
+
+  .anchor{
+    r:15;
+  }
+
+  .handle,
+  .width-handle{
+    r:11;
+  }
+}

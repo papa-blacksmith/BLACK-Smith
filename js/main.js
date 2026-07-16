@@ -8,6 +8,7 @@ import { EditorCore } from "./editor/EditorCore.js";
 const $=id=>document.getElementById(id);
 let state=loadState(),shape=cloneShape(DEFAULT_SHAPE),selectedType=0,selectedPoint=0;
 let dragIndex=null,dragHandle=null,dragWidth=false;
+let editorFramePending=false;
 let activeEditorTab="shape";
 let undoStack=[],redoStack=[];
 let editorCore=null;
@@ -230,12 +231,34 @@ function duplicateSelectedPoint(){
   selectedPoint=shape.points.indexOf(copy);
   render();
 }
+
+function scheduleEditorFrame(){
+  if(editorFramePending)return;
+  editorFramePending=true;
+
+  requestAnimationFrame(()=>{
+    editorFramePending=false;
+    drawEditor(
+      $("weaponEditor"),
+      shape,
+      selectedPoint,
+      TYPES[selectedType].name
+    );
+  });
+}
+
 function bindEditor(){
   const svg=$("weaponEditor");
   svg.addEventListener("pointerdown",e=>{
     const h=e.target.closest("[data-handle]"),a=e.target.closest(".anchor"),w=e.target.closest("[data-width-index]"),t=h||a||w;if(!t)return;
     pushHistory();
-    dragIndex=Number(t.dataset.index??t.dataset.widthIndex);selectedPoint=dragIndex;dragHandle=h?.dataset.handle||null;dragWidth=Boolean(w);svg.setPointerCapture?.(e.pointerId);render();e.preventDefault();
+    dragIndex=Number(t.dataset.index??t.dataset.widthIndex);
+    selectedPoint=dragIndex;
+    dragHandle=h?.dataset.handle||null;
+    dragWidth=Boolean(w);
+    svg.setPointerCapture?.(e.pointerId);
+    scheduleEditorFrame();
+    e.preventDefault();
   });
   svg.addEventListener("pointermove",e=>{
     if(dragIndex===null)return;
@@ -250,9 +273,24 @@ function bindEditor(){
     }else{
       p.x=Math.max(.02,Math.min(.98,(local.x-110)/760));p.y=Math.max(.05,Math.min(.95,(local.y-55)/250));shape.points.sort((a,b)=>a.x-b.x);dragIndex=shape.points.indexOf(p);selectedPoint=dragIndex;
     }
-    drawEditor(svg,shape,selectedPoint,TYPES[selectedType].name);e.preventDefault();
+    scheduleEditorFrame();
+    e.preventDefault();
   });
-  const stop=()=>{dragIndex=null;dragHandle=null;dragWidth=false};svg.addEventListener("pointerup",stop);svg.addEventListener("pointercancel",stop);
+  const stop=()=>{
+    if(dragIndex!==null){
+      dragIndex=null;
+      dragHandle=null;
+      dragWidth=false;
+      renderAdvancedPanel();
+      editorCore?.updateExternalDocument?.({
+        version:1,
+        weaponType:selectedType,
+        shape:normalizeShape(shape)
+      });
+    }
+  };
+  svg.addEventListener("pointerup",stop);
+  svg.addEventListener("pointercancel",stop);
 }
 
 document.addEventListener("click",e=>{
