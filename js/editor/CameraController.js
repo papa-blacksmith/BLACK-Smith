@@ -118,6 +118,21 @@ export class CameraController {
     if (event.code === "Space") this.spacePressed = false;
   }
 
+  setZoom(value, anchorX = 0, anchorY = 0) {
+    const before = this.screenToWorld(anchorX, anchorY);
+
+    this.zoom = this.clamp(
+      Number(value) || 1,
+      this.minZoom,
+      this.maxZoom
+    );
+
+    this.x = anchorX - before.x * this.zoom;
+    this.y = anchorY - before.y * this.zoom;
+
+    this.emitChange();
+  }
+
   reset() {
     this.x = 0;
     this.y = 0;

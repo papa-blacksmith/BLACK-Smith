@@ -15,7 +15,7 @@
     <p class="sub">FORGE OF LEGENDS</p>
     <p class="slogan">魂を打て。<br>世界に一本だけの武器を。</p>
     <button class="primary" id="enterButton">鍛冶場へ入る</button>
-    <small class="version">Ver0.6 Editor Boost</small>
+    <small class="version">Ver0.6 Canvas UI Fix</small>
   </section>
 
   <section id="home" class="screen">
@@ -48,9 +48,31 @@
     <div class="card">
       <div class="type-grid" id="weaponTypes"></div>
 
-      <div class="editor-panel">
-        <svg id="weaponEditor" class="weapon-editor" viewBox="0 0 1000 360" aria-label="武器形状エディタ"></svg>
-        <div class="hint">白＝頂点 / 金＝ハンドル / 青＝局所幅</div>
+      <div class="editor-panel" id="editorPanel">
+        <div class="canvas-toolbar">
+          <div class="canvas-status">
+            <span class="canvas-live-dot"></span>
+            <strong>FREEFORM CANVAS</strong>
+          </div>
+          <div class="canvas-actions">
+            <span class="zoom-label" id="editorZoomLabel">100%</span>
+            <button type="button" class="canvas-tool-button" id="zoomOutButton" aria-label="縮小">−</button>
+            <button type="button" class="canvas-tool-button" id="zoomInButton" aria-label="拡大">＋</button>
+            <button type="button" class="canvas-reset-button" id="resetCameraButton">表示リセット</button>
+          </div>
+        </div>
+
+        <div class="canvas-stage" id="canvasStage">
+          <svg id="weaponEditor" class="weapon-editor" viewBox="0 0 1000 360" aria-label="武器形状エディタ"></svg>
+          <div class="canvas-center-mark" aria-hidden="true"></div>
+        </div>
+
+        <div class="canvas-footer">
+          <span>左ドラッグ：造形</span>
+          <span>ホイール：ズーム</span>
+          <span>右ドラッグ：移動</span>
+          <span>Home：リセット</span>
+        </div>
       </div>
 
       <div class="toolbar">

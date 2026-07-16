@@ -37,6 +37,9 @@ function applyEditorCamera({x,y,zoom}){
   const viewY=(-y/safeZoom)+(360-height)/2;
 
   svg.setAttribute("viewBox",`${viewX} ${viewY} ${width} ${height}`);
+
+  const label=$("editorZoomLabel");
+  if(label)label.textContent=`${Math.round(safeZoom*100)}%`;
 }
 
 function initializeEditorCore(){
@@ -55,6 +58,51 @@ function initializeEditorCore(){
   });
 
   editorCore.initialize();
+}
+
+
+function bindCanvasControls(){
+  const zoomIn=$("zoomInButton");
+  const zoomOut=$("zoomOutButton");
+  const reset=$("resetCameraButton");
+  const stage=$("canvasStage");
+  const svg=$("weaponEditor");
+
+  zoomIn?.addEventListener("click",()=>{
+    if(!editorCore)return;
+    const rect=svg.getBoundingClientRect();
+    editorCore.camera.setZoom(
+      editorCore.camera.zoom*editorCore.camera.zoomStep,
+      rect.width/2,
+      rect.height/2
+    );
+  });
+
+  zoomOut?.addEventListener("click",()=>{
+    if(!editorCore)return;
+    const rect=svg.getBoundingClientRect();
+    editorCore.camera.setZoom(
+      editorCore.camera.zoom/editorCore.camera.zoomStep,
+      rect.width/2,
+      rect.height/2
+    );
+  });
+
+  reset?.addEventListener("click",()=>{
+    editorCore?.camera.reset();
+  });
+
+  svg?.addEventListener("pointerdown",(event)=>{
+    if(event.button===2)stage?.classList.add("is-panning");
+  });
+
+  window.addEventListener("pointerup",()=>{
+    stage?.classList.remove("is-panning");
+  });
+
+  window.addEventListener("pointercancel",()=>{
+    stage?.classList.remove("is-panning");
+  });
 }
 
 function renderTypes(){
@@ -226,4 +274,4 @@ document.addEventListener("input",e=>{
   if(e.target.id==="color"){pushHistory();shape.color=e.target.value;render()}
 });
 $("enterButton").onclick=enter;$("undoShape").onclick=undo;$("redoShape").onclick=redo;$("addPoint").onclick=addPoint;$("removePoint").onclick=removePoint;$("smoothPoint").onclick=smoothPoint;$("cornerPoint").onclick=cornerPoint;$("mirrorShape").onclick=mirror;$("duplicatePoint").onclick=duplicateSelectedPoint;$("resetShape").onclick=reset;$("saveBlueprint").onclick=()=>saveBlueprint();$("saveBlueprintFromForge").onclick=()=>saveBlueprint(`${TYPES[selectedType].name}設計図`);$("startForge").onclick=()=>forgeSystem.start();$("advanceForge").onclick=()=>forgeSystem.advance();
-bindEditor();initializeEditorCore();resetDaily();render();
+bindEditor();initializeEditorCore();bindCanvasControls();resetDaily();render();
