@@ -109,6 +109,8 @@ function bindCanvasControls(){
   });
 
   reset?.addEventListener("click",()=>{
+    const svg=$("weaponEditor");
+    if(svg)svg.setAttribute("viewBox","0 0 1000 360");
     editorCore?.camera.reset();
     render();
     requestAnimationFrame(()=>render());
@@ -326,12 +328,11 @@ function render(){
   $("forgeCounter").textContent=`${remaining()}/${maxForges()}`;
   $("heroWeapon").textContent=state.weapons[0]?.icon||"⚔️";
   renderTypes();renderWeaponParts();renderPartTransformControls();renderControls();renderBlueprints();renderInventory();
-  drawLayeredEditor(
+  drawEditor(
     $("weaponEditor"),
-    partSystem.getAllParts(shape),
-    partSystem.activePartId,
+    normalizeShape(shape),
     selectedPoint,
-    TYPES[selectedType].name
+    `${TYPES[selectedType].name}・${partSystem.getActiveDefinition()?.label || ""}`
   );
   editorCore?.setDocument({
     version:1,
@@ -426,12 +427,11 @@ function scheduleEditorFrame(){
 
   requestAnimationFrame(()=>{
     editorFramePending=false;
-    drawLayeredEditor(
+    drawEditor(
       $("weaponEditor"),
-      partSystem.getAllParts(shape),
-      partSystem.activePartId,
+      normalizeShape(shape),
       selectedPoint,
-      TYPES[selectedType].name
+      `${TYPES[selectedType].name}・${partSystem.getActiveDefinition()?.label || ""}`
     );
   });
 }

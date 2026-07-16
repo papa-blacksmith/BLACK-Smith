@@ -752,3 +752,16 @@ input[type="range"]:active{
 .active-part-transform{
   opacity:1 !important;
 }
+
+
+/* Renderer Rollback Fix */
+#weaponEditor{
+  display:block !important;
+  visibility:visible !important;
+  opacity:1 !important;
+}
+
+#weaponEditor g{
+  opacity:1;
+  visibility:visible;
+}
