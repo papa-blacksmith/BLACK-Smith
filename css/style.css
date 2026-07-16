@@ -1173,3 +1173,83 @@ input[type="range"]:active{
     overflow-x:auto;
   }
 }
+
+
+/* Ore Hero Visual */
+.ore-hero-visual{
+  position:relative;
+  margin:10px 0 14px;
+  min-height:180px;
+  overflow:hidden;
+  border:1px solid #4a3a27;
+  border-radius:18px;
+  background:#111720;
+  box-shadow:
+    0 20px 50px rgba(0,0,0,.34),
+    inset 0 0 0 1px rgba(230,184,94,.08);
+}
+
+.ore-hero-visual img{
+  display:block;
+  width:100%;
+  height:clamp(180px,28vw,300px);
+  object-fit:cover;
+  object-position:center 25%;
+  opacity:.76;
+  filter:saturate(1.1) contrast(1.05) brightness(.8);
+}
+
+.ore-hero-visual::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(180deg,rgba(6,8,12,.04),rgba(6,8,12,.72)),
+    radial-gradient(circle at 50% 40%,transparent 20%,rgba(4,7,12,.48) 100%);
+  pointer-events:none;
+}
+
+.ore-hero-overlay{
+  position:absolute;
+  left:18px;
+  right:18px;
+  bottom:16px;
+  z-index:2;
+}
+
+.ore-hero-overlay small{
+  display:block;
+  color:#f1c878;
+  font-size:8px;
+  letter-spacing:.18em;
+  text-shadow:0 2px 10px #000;
+}
+
+.ore-hero-overlay strong{
+  display:block;
+  margin-top:4px;
+  color:#fff4d7;
+  font-size:clamp(18px,3vw,30px);
+  text-shadow:0 3px 16px rgba(0,0,0,.9);
+}
+
+#oreGachaButton{
+  position:relative;
+  z-index:5;
+  pointer-events:auto;
+  cursor:pointer;
+}
+
+#oreGachaButton:disabled{
+  cursor:not-allowed;
+}
+
+@media(max-width:560px){
+  .ore-hero-visual{
+    min-height:150px;
+  }
+
+  .ore-hero-visual img{
+    height:170px;
+  }
+}

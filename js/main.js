@@ -452,6 +452,18 @@ function formatResetRemaining(){
   return `次回更新まで ${hours}時間${minutes}分`;
 }
 
+
+function bindOreGachaButton(){
+  const button=$("oreGachaButton");
+  if(!button)return;
+
+  button.onclick=(event)=>{
+    event.preventDefault();
+    event.stopPropagation();
+    handleOreGacha();
+  };
+}
+
 function renderOreGacha(){
   const resultsHost=$("oreGachaResults");
   const button=$("oreGachaButton");
@@ -504,6 +516,7 @@ function renderOreGacha(){
     button.textContent="本日の5個を抽選";
     if(status)status.textContent="同じ鉱物が重複して出ることがあります。";
   }
+  bindOreGachaButton();
 }
 
 function handleOreGacha(){
