@@ -1793,3 +1793,7 @@ input[type="range"]:active{
   font-size:7px;
   vertical-align:middle;
 }
+
+/* Phase 3-2 Ribbon Sync Fix */
+#weapon3DStatus[data-state="ok"]{color:#69d99a;}
+#weapon3DStatus[data-state="warning"]{color:#efb761;}

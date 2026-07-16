@@ -1076,7 +1076,6 @@ function renderAdvancedPanel(){
 
 function updateEditorPreviewOnly(){
   scheduleEditorFrame();
-  updateWeapon3DPreview();
 
   document.querySelectorAll("[data-live-shape]").forEach((label)=>{
     const key=label.dataset.liveShape;
@@ -1231,6 +1230,9 @@ function scheduleEditorFrame(){
       selectedPoint,
       `${TYPES[selectedType].name}・${partSystem.getActiveDefinition()?.label || ""}`
     );
+
+    // 2D描画が完了した同じフレームの最後で、最新形状を3Dへ渡す。
+    updateWeapon3DPreview();
   });
 }
 

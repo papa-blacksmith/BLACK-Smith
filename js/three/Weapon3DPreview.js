@@ -9,6 +9,8 @@ export class Weapon3DPreview {
     this.getActivePart = getActivePart;
     this.onStatus = onStatus;
     this.updateQueued = false;
+    this.updateDirty = false;
+    this.forceNextUpdate = false;
     this.disposed = false;
     this.lastSignature = "";
 
@@ -92,13 +94,34 @@ export class Weapon3DPreview {
     this.camera.updateProjectionMatrix();
   }
 
-  scheduleUpdate() {
-    if (this.updateQueued || this.disposed) return;
+  scheduleUpdate(force = false) {
+    if (this.disposed) return;
+
+    this.updateDirty = true;
+    this.forceNextUpdate = this.forceNextUpdate || force;
+
+    if (this.updateQueued) return;
+
     this.updateQueued = true;
-    requestAnimationFrame(() => {
-      this.updateQueued = false;
-      this.rebuild(false);
-    });
+    requestAnimationFrame(() => this.flushUpdateQueue());
+  }
+
+  flushUpdateQueue() {
+    if (this.disposed) return;
+
+    const force = this.forceNextUpdate;
+    this.forceNextUpdate = false;
+    this.updateDirty = false;
+
+    this.rebuild(force);
+
+    // rebuild中に2D側がもう一度更新された場合、次フレームで必ず追従する。
+    if (this.updateDirty || this.forceNextUpdate) {
+      requestAnimationFrame(() => this.flushUpdateQueue());
+      return;
+    }
+
+    this.updateQueued = false;
   }
 
   rebuild(force = false) {
@@ -124,11 +147,10 @@ export class Weapon3DPreview {
       const sampled = sampleWeaponGeometry(shape, 300);
       const contour = sanitizeContour(sampled.contour);
       if (contour.length < 3) throw new Error("輪郭頂点が不足しています");
-      if (hasSelfIntersection(contour)) {
-        throw new Error("2D輪郭が自己交差しています");
-      }
 
-      const newMesh = buildExactMesh(contour, sampled, shape);
+      // 全輪郭の一括三角形分割ではなく、中心線に沿った帯状メッシュを生成する。
+      // 深い反りや鋸刃でも長い交差三角形が発生しない。
+      const newMesh = buildRibbonMesh(sampled, shape);
       newMesh.userData.partId = part?.id || "active";
       newMesh.userData.partLabel = part?.label || "選択中パーツ";
 
@@ -141,7 +163,7 @@ export class Weapon3DPreview {
 
       this.lastSignature = signature;
       this.centerWeapon();
-      this.onStatus(`同期済み・${contour.length}頂点`, "ok");
+      this.onStatus(`同期済み・帯状${sampled.samples.length}区間`, "ok");
     } catch (error) {
       console.warn("3D同期を保留しました", error);
       this.onStatus(`同期保留：${error.message}`, "warning");
@@ -163,6 +185,7 @@ export class Weapon3DPreview {
   }
 
   resetView() {
+    this.scheduleUpdate(true);
     this.weaponRoot.rotation.set(-.22, .08, 0);
     this.centerWeapon();
   }
@@ -175,47 +198,95 @@ export class Weapon3DPreview {
   }
 }
 
-function buildExactMesh(contourInput, sampled, shape) {
-  let contour = contourInput.map((point) => new THREE.Vector2(point.x, point.y));
-  if (signedArea(contour) < 0) contour = contour.reverse();
+function buildRibbonMesh(sampled, shape) {
+  const top = (sampled.top || []).map(toPoint);
+  const bottom = (sampled.bottom || []).map(toPoint);
+  const tip = toPoint(sampled.tip);
 
-  const triangles = THREE.ShapeUtils.triangulateShape(contour, []);
-  if (!triangles.length) throw new Error("三角形分割に失敗しました");
+  const pairCount = Math.min(top.length, bottom.length);
+  if (pairCount < 2) throw new Error("帯状メッシュの頂点が不足しています");
 
-  const box = contourBounds(contour);
-  const centerX = (box.minX + box.maxX) / 2;
-  const centerY = (box.minY + box.maxY) / 2;
-  const length = Math.max(1, box.maxX - box.minX);
+  const all2D = [
+    ...top.slice(0, pairCount),
+    tip,
+    ...bottom.slice(0, pairCount)
+  ];
+  const bounds = pointBounds(all2D);
+  const centerX = (bounds.minX + bounds.maxX) / 2;
+  const centerY = (bounds.minY + bounds.maxY) / 2;
+  const length = Math.max(1, bounds.maxX - bounds.minX);
   const baseDepth = clamp(Number(shape.thickness || 22) * .72, 4, 58);
-  const count = contour.length;
+
   const positions = [];
   const uvs = [];
-
-  for (let side = 0; side < 2; side += 1) {
-    for (const point of contour) {
-      const t = clamp((point.x - box.minX) / length, 0, 1);
-      const tipDepth = Math.max(.12, 1 - Math.pow(t, 5) * .86);
-      const z = (side === 0 ? 1 : -1) * baseDepth * tipDepth / 2;
-      positions.push(point.x - centerX, -(point.y - centerY), z);
-      uvs.push((point.x - box.minX) / Math.max(1, box.maxX - box.minX),
-        (point.y - box.minY) / Math.max(1, box.maxY - box.minY));
-    }
-  }
-
   const indices = [];
-  for (const tri of triangles) {
-    indices.push(tri[0], tri[1], tri[2]);
-    indices.push(count + tri[2], count + tri[1], count + tri[0]);
+
+  const frontTop = [];
+  const frontBottom = [];
+  const backTop = [];
+  const backBottom = [];
+
+  function addVertex(point, z, u, v) {
+    const index = positions.length / 3;
+    positions.push(point.x - centerX, -(point.y - centerY), z);
+    uvs.push(u, v);
+    return index;
   }
 
-  for (let i = 0; i < count; i += 1) {
-    const next = (i + 1) % count;
-    indices.push(i, next, count + next);
-    indices.push(i, count + next, count + i);
+  for (let i = 0; i < pairCount; i += 1) {
+    const t = pairCount <= 1 ? 0 : i / (pairCount - 1);
+    const tipDepth = Math.max(.12, 1 - Math.pow(t, 5) * .86);
+    const halfDepth = baseDepth * tipDepth / 2;
+
+    frontTop.push(addVertex(top[i], halfDepth, t, 1));
+    frontBottom.push(addVertex(bottom[i], halfDepth, t, 0));
+    backTop.push(addVertex(top[i], -halfDepth, t, 1));
+    backBottom.push(addVertex(bottom[i], -halfDepth, t, 0));
   }
+
+  const tipHalfDepth = baseDepth * .06;
+  const frontTip = addVertex(tip, tipHalfDepth, 1, .5);
+  const backTip = addVertex(tip, -tipHalfDepth, 1, .5);
+
+  for (let i = 0; i < pairCount - 1; i += 1) {
+    const next = i + 1;
+
+    // 表面：短い四角形を2三角形に分ける。
+    indices.push(frontTop[i], frontBottom[i], frontTop[next]);
+    indices.push(frontTop[next], frontBottom[i], frontBottom[next]);
+
+    // 裏面は法線方向を反転。
+    indices.push(backTop[next], backBottom[i], backTop[i]);
+    indices.push(backBottom[next], backBottom[i], backTop[next]);
+
+    // 上側面。
+    indices.push(frontTop[i], frontTop[next], backTop[i]);
+    indices.push(frontTop[next], backTop[next], backTop[i]);
+
+    // 下側面。
+    indices.push(frontBottom[next], frontBottom[i], backBottom[i]);
+    indices.push(backBottom[next], frontBottom[next], backBottom[i]);
+  }
+
+  const last = pairCount - 1;
+
+  // 刃先キャップ。
+  indices.push(frontTop[last], frontBottom[last], frontTip);
+  indices.push(backTip, backBottom[last], backTop[last]);
+  indices.push(frontTop[last], frontTip, backTop[last]);
+  indices.push(frontTip, backTip, backTop[last]);
+  indices.push(frontTip, frontBottom[last], backTip);
+  indices.push(frontBottom[last], backBottom[last], backTip);
+
+  // 根元キャップ。
+  indices.push(frontTop[0], backTop[0], frontBottom[0]);
+  indices.push(frontBottom[0], backTop[0], backBottom[0]);
 
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
+  );
   geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
@@ -237,6 +308,27 @@ function buildExactMesh(contourInput, sampled, shape) {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   return mesh;
+}
+
+function toPoint(point) {
+  return {
+    x: Number(point?.x) || 0,
+    y: Number(point?.y) || 0
+  };
+}
+
+function pointBounds(points) {
+  return points.reduce((bounds, point) => ({
+    minX: Math.min(bounds.minX, point.x),
+    minY: Math.min(bounds.minY, point.y),
+    maxX: Math.max(bounds.maxX, point.x),
+    maxY: Math.max(bounds.maxY, point.y)
+  }), {
+    minX: Infinity,
+    minY: Infinity,
+    maxX: -Infinity,
+    maxY: -Infinity
+  });
 }
 
 function sanitizeContour(points) {
