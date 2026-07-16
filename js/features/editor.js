@@ -138,3 +138,82 @@ export function eventToLocal(svg,event){
   const pt=svg.createSVGPoint();pt.x=event.clientX;pt.y=event.clientY;
   const matrix=svg.getScreenCTM();return matrix?pt.matrixTransform(matrix.inverse()):{x:0,y:0};
 }
+
+
+export function createShapePreview(shapeInput, typeName = "") {
+  const shape = normalizeShape(shapeInput);
+  const sx = 18, sy = 18, ux = 244, uy = 84;
+  const anchors = shape.points.map((p) => ({
+    x: sx + p.x * ux,
+    y: sy + p.y * uy,
+    inX: sx + (p.x + p.inX) * ux,
+    inY: sy + (p.y + p.inY) * uy,
+    outX: sx + (p.x + p.outX) * ux,
+    outY: sy + (p.y + p.outY) * uy
+  }));
+
+  const center = [];
+  for (let i = 0; i < anchors.length - 1; i++) {
+    const a = anchors[i], b = anchors[i + 1];
+    for (let s = 0; s < 12; s++) {
+      center.push(cubic(
+        { x: a.x, y: a.y },
+        { x: a.outX, y: a.outY },
+        { x: b.inX, y: b.inY },
+        { x: b.x, y: b.y },
+        s / 12
+      ));
+    }
+  }
+  center.push({ x: anchors.at(-1).x, y: anchors.at(-1).y });
+
+  const base = 7 + shape.width * .11;
+  const top = [], bottom = [];
+  center.forEach((p, i) => {
+    const before = center[Math.max(0, i - 1)];
+    const after = center[Math.min(center.length - 1, i + 1)];
+    const dx = after.x - before.x;
+    const dy = after.y - before.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len, ny = dx / len;
+    const ratio = i / Math.max(1, center.length - 1);
+    const taper = 1 - ratio * Math.min(.65, shape.tip / 140);
+    const localIndex = Math.min(shape.points.length - 1, Math.round(ratio * (shape.points.length - 1)));
+    const local = shape.points[localIndex];
+    const half = Math.max(2, base * taper * (local.width || 1) / 2);
+    top.push({ x: p.x + nx * half, y: p.y + ny * half });
+    bottom.push({ x: p.x - nx * half, y: p.y - ny * half });
+  });
+
+  const last = center.at(-1);
+  const prev = center.at(-2) || last;
+  const dx = last.x - prev.x;
+  const dy = last.y - prev.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const tip = {
+    x: last.x + dx / len * (6 + shape.tip * .16),
+    y: last.y + dy / len * (6 + shape.tip * .16)
+  };
+
+  const path = [
+    `M ${top[0].x} ${top[0].y}`,
+    ...top.slice(1).map((p) => `L ${p.x} ${p.y}`),
+    `L ${tip.x} ${tip.y}`,
+    ...bottom.reverse().map((p) => `L ${p.x} ${p.y}`),
+    "Z"
+  ].join(" ");
+
+  return `
+    <svg class="weapon-mini-preview" viewBox="0 0 280 120" aria-label="${typeName}の形状プレビュー">
+      <defs>
+        <linearGradient id="miniMetal" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ffffff"/>
+          <stop offset=".35" stop-color="${shape.color}"/>
+          <stop offset="1" stop-color="#555e6c"/>
+        </linearGradient>
+      </defs>
+      <rect x="3" y="48" width="38" height="20" rx="7" fill="#4a2f2b"/>
+      <rect x="37" y="37" width="8" height="42" rx="4" fill="#a56a2d"/>
+      <path d="${path}" fill="url(#miniMetal)" stroke="#e6b85e" stroke-width="1.4"/>
+    </svg>`;
+}

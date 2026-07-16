@@ -329,3 +329,72 @@ h1{font-size:48px;line-height:.9;letter-spacing:.1em;margin:0}
     r:11;
   }
 }
+
+
+/* Phase 2-1 Point Editing */
+.editor-context-menu{
+  position:fixed;
+  z-index:100;
+  width:176px;
+  display:none;
+  padding:7px;
+  border:1px solid #424c5c;
+  border-radius:12px;
+  background:rgba(14,18,25,.98);
+  box-shadow:0 16px 50px rgba(0,0,0,.55);
+  backdrop-filter:blur(14px);
+}
+
+.editor-context-menu.show{
+  display:grid;
+  gap:5px;
+}
+
+.editor-context-menu button{
+  width:100%;
+  padding:10px 11px;
+  border:0;
+  border-radius:8px;
+  background:#1a202a;
+  color:#f5f6f8;
+  text-align:left;
+  font-size:11px;
+}
+
+.editor-context-menu button:hover{
+  background:#2a3340;
+  color:#f0c873;
+}
+
+.inventory-preview{
+  height:72px;
+  display:grid;
+  place-items:center;
+  margin:7px 0 9px;
+  overflow:hidden;
+  border-radius:9px;
+  background:
+    radial-gradient(circle at center,rgba(145,87,39,.15),transparent 68%),
+    #10151d;
+}
+
+.weapon-mini-preview{
+  display:block;
+  width:100%;
+  height:70px;
+}
+
+.shape-code{
+  display:block;
+  margin-top:5px;
+  color:#72aef8;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+  font-size:8px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.weapon-card{
+  min-height:176px;
+}

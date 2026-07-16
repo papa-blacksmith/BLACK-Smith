@@ -15,7 +15,7 @@
     <p class="sub">FORGE OF LEGENDS</p>
     <p class="slogan">魂を打て。<br>世界に一本だけの武器を。</p>
     <button class="primary" id="enterButton">鍛冶場へ入る</button>
-    <small class="version">Ver0.6 Phase 1 Interaction Boost</small>
+    <small class="version">Ver0.6 Phase 2-1 Point Editing</small>
   </section>
 
   <section id="home" class="screen">
@@ -154,6 +154,15 @@
   </div>
 
   <div id="toast" class="toast"></div>
+
+  <div id="editorContextMenu" class="editor-context-menu" role="menu" aria-hidden="true">
+    <button type="button" data-context-action="add">点を追加</button>
+    <button type="button" data-context-action="delete">点を削除</button>
+    <button type="button" data-context-action="smooth">スムーズ</button>
+    <button type="button" data-context-action="corner">シャープ</button>
+    <button type="button" data-context-action="mirror">左右ミラー</button>
+  </div>
+
 </div>
 
 <script type="module" src="./js/main.js"></script>

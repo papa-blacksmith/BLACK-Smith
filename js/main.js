@@ -1,7 +1,7 @@
 import { TYPES, RARITIES } from "./core/data.js";
 import { loadState, saveState } from "./core/storage.js";
 import { DEFAULT_SHAPE, cloneShape, normalizeShape, fingerprint } from "./core/shapeModel.js";
-import { drawEditor, eventToLocal } from "./features/editor.js";
+import { drawEditor, eventToLocal, createShapePreview } from "./features/editor.js";
 import { ForgeSystem } from "./features/ForgeSystem.js";
 import { EditorCore } from "./editor/EditorCore.js";
 
@@ -9,6 +9,7 @@ const $=id=>document.getElementById(id);
 let state=loadState(),shape=cloneShape(DEFAULT_SHAPE),selectedType=0,selectedPoint=0;
 let dragIndex=null,dragHandle=null,dragWidth=false;
 let editorFramePending=false;
+let contextWorldPoint=null;
 let activeEditorTab="shape";
 let undoStack=[],redoStack=[];
 let editorCore=null;
@@ -161,7 +162,12 @@ function renderBlueprints(){
 function renderInventory(){
   $("inventoryCount").textContent=state.weapons.length;
   $("inventoryGrid").innerHTML=state.weapons.map((w,i)=>`<button class="weapon-card" data-weapon="${i}">
-    <span class="badge" style="color:${w.color}">${w.rarity}</span><div class="icon">${w.icon}</div><b>${w.name}</b><small>${w.type}</small></button>`).join("")||'<div>まだ武器がありません</div>';
+    <span class="badge" style="color:${w.color}">${w.rarity}</span>
+    <div class="inventory-preview">${w.shape ? createShapePreview(w.shape,w.type) : `<div class="icon">${w.icon}</div>`}</div>
+    <b>${w.name}</b>
+    <small>${w.type}</small>
+    ${w.shapeId ? `<small class="shape-code">${w.shapeId}</small>` : ""}
+  </button>`).join("")||'<div>まだ武器がありません</div>';
 }
 function render(){
   resetDaily();
@@ -199,7 +205,7 @@ const forgeSystem = new ForgeSystem({
 });
 
 function addPoint(){if(shape.points.length>=12)return toast("最大12点です");pushHistory();const p=[...shape.points].sort((a,b)=>a.x-b.x);let idx=0,gap=-1;for(let i=0;i<p.length-1;i++){const g=p[i+1].x-p[i].x;if(g>gap){gap=g;idx=i}}const a=p[idx],b=p[idx+1];p.splice(idx+1,0,{x:(a.x+b.x)/2,y:(a.y+b.y)/2,inX:-.05,inY:0,outX:.05,outY:0,smooth:true});shape.points=p;selectedPoint=idx+1;render()}
-function removePoint(){if(shape.points.length<=2)return toast("最低2点必要です");pushHistory();shape.points.splice(selectedPoint,1);selectedPoint=Math.max(0,Math.min(selectedPoint,shape.points.length-1));render()}
+function removePoint(){deleteSelectedPoint()}
 function smoothPoint(){pushHistory();const p=shape.points[selectedPoint];p.smooth=true;const lenIn=Math.hypot(p.inX,p.inY)||.08,lenOut=Math.hypot(p.outX,p.outY)||.08,angle=Math.atan2(p.outY,p.outX);p.outX=Math.cos(angle)*lenOut;p.outY=Math.sin(angle)*lenOut;p.inX=-Math.cos(angle)*lenIn;p.inY=-Math.sin(angle)*lenIn;render()}
 function cornerPoint(){pushHistory();shape.points[selectedPoint].smooth=false;render()}
 function mirror(){pushHistory();shape.points=shape.points.map(p=>({...p,x:1-p.x,inX:-p.outX,inY:p.outY,outX:-p.inX,outY:p.inY})).sort((a,b)=>a.x-b.x);render()}
@@ -244,6 +250,164 @@ function scheduleEditorFrame(){
       selectedPoint,
       TYPES[selectedType].name
     );
+  });
+}
+
+
+function clampPoint(value,min,max){
+  return Math.max(min,Math.min(max,value));
+}
+
+function findInsertIndexByX(x){
+  const points=shape.points;
+  for(let i=0;i<points.length-1;i++){
+    if(x>=points[i].x && x<=points[i+1].x)return i+1;
+  }
+  return x<points[0].x ? 0 : points.length;
+}
+
+function createPointAtLocal(local){
+  if(shape.points.length>=12){
+    toast("制御点は最大12点です");
+    return false;
+  }
+
+  const x=clampPoint((local.x-110)/760,.02,.98);
+  const y=clampPoint((local.y-55)/250,.05,.95);
+  const insertIndex=findInsertIndexByX(x);
+
+  const previous=shape.points[Math.max(0,insertIndex-1)];
+  const next=shape.points[Math.min(shape.points.length-1,insertIndex)];
+  const span=Math.max(.04,Math.abs((next?.x??x+.1)-(previous?.x??x-.1)));
+
+  pushHistory();
+
+  const point={
+    x,
+    y,
+    inX:-Math.min(.12,span*.32),
+    inY:0,
+    outX:Math.min(.12,span*.32),
+    outY:0,
+    smooth:true,
+    width:((previous?.width??1)+(next?.width??1))/2,
+    upper:((previous?.upper??1)+(next?.upper??1))/2,
+    lower:((previous?.lower??1)+(next?.lower??1))/2
+  };
+
+  shape.points.splice(insertIndex,0,point);
+  shape.points.sort((a,b)=>a.x-b.x);
+  selectedPoint=shape.points.indexOf(point);
+  render();
+  toast("制御点を追加しました");
+  return true;
+}
+
+function deleteSelectedPoint(){
+  if(shape.points.length<=3){
+    toast("制御点は最低3点必要です");
+    return false;
+  }
+
+  pushHistory();
+  shape.points.splice(selectedPoint,1);
+  selectedPoint=Math.max(0,Math.min(selectedPoint,shape.points.length-1));
+
+  const current=shape.points[selectedPoint];
+  if(current){
+    current.inX=Math.min(current.inX,-.03);
+    current.outX=Math.max(current.outX,.03);
+  }
+
+  render();
+  toast("制御点を削除しました");
+  return true;
+}
+
+function showEditorContextMenu(event){
+  const menu=$("editorContextMenu");
+  if(!menu)return;
+
+  const svg=$("weaponEditor");
+  contextWorldPoint=eventToLocal(svg,event);
+
+  const target=event.target.closest("[data-index],[data-width-index]");
+  if(target){
+    const index=Number(target.dataset.index??target.dataset.widthIndex);
+    if(Number.isFinite(index))selectedPoint=index;
+  }
+
+  menu.style.left=`${Math.min(window.innerWidth-190,event.clientX)}px`;
+  menu.style.top=`${Math.min(window.innerHeight-230,event.clientY)}px`;
+  menu.classList.add("show");
+  menu.setAttribute("aria-hidden","false");
+}
+
+function hideEditorContextMenu(){
+  const menu=$("editorContextMenu");
+  if(!menu)return;
+  menu.classList.remove("show");
+  menu.setAttribute("aria-hidden","true");
+}
+
+function handleContextAction(action){
+  if(action==="add" && contextWorldPoint)createPointAtLocal(contextWorldPoint);
+  if(action==="delete")deleteSelectedPoint();
+  if(action==="smooth")smoothPoint();
+  if(action==="corner")cornerPoint();
+  if(action==="mirror")mirror();
+  hideEditorContextMenu();
+}
+
+function bindPointEditing(){
+  const svg=$("weaponEditor");
+
+  svg.addEventListener("dblclick",(event)=>{
+    if(event.button!==0)return;
+    if(event.target.closest("[data-index],[data-handle],[data-width-index]"))return;
+    createPointAtLocal(eventToLocal(svg,event));
+  });
+
+  svg.addEventListener("contextmenu",(event)=>{
+    event.preventDefault();
+    showEditorContextMenu(event);
+  });
+
+  document.addEventListener("click",(event)=>{
+    if(!event.target.closest("#editorContextMenu"))hideEditorContextMenu();
+  });
+
+  document.addEventListener("keydown",(event)=>{
+    const target=event.target;
+    const editingText=target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement ||
+      target?.isContentEditable;
+
+    if(editingText)return;
+
+    if(event.code==="Delete" || event.code==="Backspace"){
+      event.preventDefault();
+      deleteSelectedPoint();
+    }
+
+    if((event.ctrlKey||event.metaKey) && event.code==="KeyZ" && !event.shiftKey){
+      event.preventDefault();
+      undo();
+    }
+
+    if(
+      ((event.ctrlKey||event.metaKey) && event.code==="KeyY") ||
+      ((event.ctrlKey||event.metaKey) && event.shiftKey && event.code==="KeyZ")
+    ){
+      event.preventDefault();
+      redo();
+    }
+  });
+
+  $("editorContextMenu")?.addEventListener("click",(event)=>{
+    const button=event.target.closest("[data-context-action]");
+    if(button)handleContextAction(button.dataset.contextAction);
   });
 }
 
@@ -312,4 +476,4 @@ document.addEventListener("input",e=>{
   if(e.target.id==="color"){pushHistory();shape.color=e.target.value;render()}
 });
 $("enterButton").onclick=enter;$("undoShape").onclick=undo;$("redoShape").onclick=redo;$("addPoint").onclick=addPoint;$("removePoint").onclick=removePoint;$("smoothPoint").onclick=smoothPoint;$("cornerPoint").onclick=cornerPoint;$("mirrorShape").onclick=mirror;$("duplicatePoint").onclick=duplicateSelectedPoint;$("resetShape").onclick=reset;$("saveBlueprint").onclick=()=>saveBlueprint();$("saveBlueprintFromForge").onclick=()=>saveBlueprint(`${TYPES[selectedType].name}設計図`);$("startForge").onclick=()=>forgeSystem.start();$("advanceForge").onclick=()=>forgeSystem.advance();
-bindEditor();initializeEditorCore();bindCanvasControls();resetDaily();render();
+bindEditor();bindPointEditing();initializeEditorCore();bindCanvasControls();resetDaily();render();
