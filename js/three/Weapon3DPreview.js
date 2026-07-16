@@ -13,12 +13,14 @@ export class Weapon3DPreview {
     getShape,
     getActivePart,
     getParts = null,
+    getWeaponType = () => 0,
     onStatus = () => {}
   }) {
     this.container = container;
     this.getShape = getShape;
     this.getActivePart = getActivePart;
     this.getParts = getParts;
+    this.getWeaponType = getWeaponType;
     this.onStatus = onStatus;
 
     this.updateQueued = false;
@@ -183,8 +185,11 @@ export class Weapon3DPreview {
           transform: {}
         }];
 
-    const signature = JSON.stringify(
-      parts.map((part) => ({
+    const weaponType = Number(this.getWeaponType?.() ?? 0);
+
+    const signature = JSON.stringify({
+      weaponType,
+      parts: parts.map((part) => ({
         id: part.id,
         label: part.label,
         shape: {
@@ -201,28 +206,20 @@ export class Weapon3DPreview {
         transform: part.transform,
         visible: part.visible
       }))
-    );
+    });
 
     if (!force && signature === this.lastSignature) return;
 
     try {
-      const nextAssembly = new THREE.Group();
-      nextAssembly.name = "WeaponAssembly";
+      const generated = weaponType === 0
+        ? this.buildOneHandSword(parts)
+        : this.buildGenericWeapon(parts);
 
-      let totalVertices = 0;
-      let repairedParts = 0;
+      const nextAssembly = generated.assembly;
+      const totalVertices = generated.totalVertices;
+      const repairedParts = generated.repairedParts;
 
-      parts.forEach((part, index) => {
-        const result = this.buildPartObject(part, index, parts.length);
-
-        if (!result?.object) return;
-
-        totalVertices += result.vertexCount || 0;
-        repairedParts += result.repaired ? 1 : 0;
-        nextAssembly.add(result.object);
-      });
-
-      if (!nextAssembly.children.length) {
+      if (!nextAssembly?.children.length) {
         throw new Error("3D化できるパーツがありません");
       }
 
@@ -238,7 +235,7 @@ export class Weapon3DPreview {
       this.centerWeapon();
 
       this.onStatus(
-        `組立同期済み・${parts.length}パーツ・${totalVertices}頂点` +
+        `${weaponType === 0 ? "片手剣専用" : "共通"}同期済み・${parts.length}パーツ・${totalVertices}頂点` +
         (repairedParts ? `・修復${repairedParts}` : ""),
         "ok"
       );
@@ -249,6 +246,166 @@ export class Weapon3DPreview {
         "warning"
       );
     }
+  }
+
+
+  buildGenericWeapon(parts) {
+    const assembly = new THREE.Group();
+    assembly.name = "GenericWeaponAssembly";
+
+    let totalVertices = 0;
+    let repairedParts = 0;
+
+    parts.forEach((part, index) => {
+      const result = this.buildPartObject(part, index, parts.length);
+      if (!result?.object) return;
+
+      totalVertices += result.vertexCount || 0;
+      repairedParts += result.repaired ? 1 : 0;
+      assembly.add(result.object);
+    });
+
+    return { assembly, totalVertices, repairedParts };
+  }
+
+  buildOneHandSword(parts) {
+    const assembly = new THREE.Group();
+    assembly.name = "OneHandSwordAssembly";
+
+    const byId = Object.fromEntries(
+      parts.map((part) => [String(part.id || "").toLowerCase(), part])
+    );
+
+    const bladePart = byId.blade || parts.find((part) =>
+      /刀身|blade/i.test(`${part.id} ${part.label}`)
+    );
+
+    if (!bladePart?.shape) {
+      throw new Error("片手剣の刀身パーツがありません");
+    }
+
+    const bladeResult = this.buildBladeForOneHandSword(bladePart);
+    assembly.add(bladeResult.object);
+
+    const bladeBox = new THREE.Box3().setFromObject(bladeResult.object);
+    const bladeSize = bladeBox.getSize(new THREE.Vector3());
+    const bladeBaseX = bladeBox.min.x;
+    const bladeCenterY = (bladeBox.min.y + bladeBox.max.y) / 2;
+
+    let totalVertices = bladeResult.vertexCount;
+    let repairedParts = bladeResult.repaired ? 1 : 0;
+
+    const guardPart = byId.guard || parts.find((part) =>
+      /鍔|guard/i.test(`${part.id} ${part.label}`)
+    );
+    const gripPart = byId.grip || parts.find((part) =>
+      /柄|grip|handle/i.test(`${part.id} ${part.label}`)
+    );
+    const pommelPart = byId.pommel || parts.find((part) =>
+      /ポンメル|柄頭|pommel/i.test(`${part.id} ${part.label}`)
+    );
+
+    const guardThickness = clamp(
+      Number(guardPart?.shape?.thickness || 28) * 0.72,
+      12,
+      46
+    );
+    const guardX = bladeBaseX - guardThickness * 0.34;
+
+    if (guardPart?.visible !== false && guardPart?.shape) {
+      const guard = buildOneHandSwordGuard(
+        guardPart.shape,
+        guardPart,
+        guardX,
+        bladeCenterY
+      );
+      assembly.add(guard);
+      totalVertices += guard.geometry?.attributes?.position?.count || 0;
+    }
+
+    const gripLength = clamp(
+      Number(gripPart?.shape?.length || 128),
+      82,
+      190
+    );
+    const gripCenterX = guardX - guardThickness * 0.55 - gripLength / 2;
+
+    if (gripPart?.visible !== false && gripPart?.shape) {
+      const grip = buildOneHandSwordGrip(
+        gripPart.shape,
+        gripPart,
+        gripCenterX,
+        bladeCenterY,
+        gripLength
+      );
+      assembly.add(grip);
+      totalVertices += grip.geometry?.attributes?.position?.count || 0;
+    }
+
+    if (pommelPart?.visible !== false && pommelPart?.shape) {
+      const pommelX = gripCenterX - gripLength / 2 - 11;
+      const pommel = buildOneHandSwordPommel(
+        pommelPart.shape,
+        pommelPart,
+        pommelX,
+        bladeCenterY
+      );
+      assembly.add(pommel);
+      totalVertices += pommel.geometry?.attributes?.position?.count || 0;
+    }
+
+    // Blade-to-guard collar hides small gaps between independently generated meshes.
+    const collar = buildSwordCollar(
+      bladeBaseX - 2,
+      bladeCenterY,
+      clamp(bladeSize.y * 0.42, 11, 30),
+      clamp(bladeSize.z * 1.15, 8, 30),
+      bladePart.shape
+    );
+    assembly.add(collar);
+    totalVertices += collar.geometry?.attributes?.position?.count || 0;
+
+    assembly.userData.generator = "one-hand-sword";
+    assembly.userData.weaponType = 0;
+
+    return { assembly, totalVertices, repairedParts };
+  }
+
+  buildBladeForOneHandSword(part) {
+    const shape = part.shape;
+    const sampled = sampleWeaponGeometry(shape, CAD_SAMPLE_COUNT);
+    const rawContour = sanitizeContour(sampled.contour);
+
+    if (rawContour.length < 3) {
+      throw new Error("片手剣の刀身輪郭が不足しています");
+    }
+
+    const repaired = repairPolygon(rawContour);
+    const contour = simplifyContour(repaired);
+
+    if (contour.length < 3 || hasSelfIntersection(contour)) {
+      throw new Error("片手剣の刀身輪郭を修復できません");
+    }
+
+    const object = buildCADMesh(contour, shape);
+
+    // CAD mesh is centered. Move its left edge to the assembly ROOT.
+    object.geometry.computeBoundingBox();
+    const localBox = object.geometry.boundingBox;
+    if (localBox) {
+      object.position.x -= localBox.min.x;
+      object.position.y -= (localBox.min.y + localBox.max.y) / 2;
+    }
+
+    applyUserTransformOnly(object, part.transform);
+    object.userData.partId = part.id || "blade";
+    object.userData.partLabel = part.label || "刀身";
+
+    return {
+      object,
+      vertexCount: object.geometry?.attributes?.position?.count || 0,
+      repaired: contour.length !== rawContour.length
+    };
   }
 
   buildPartObject(part, index, total) {
@@ -507,6 +664,137 @@ function buildCADMesh(contourInput, shape) {
   return mesh;
 }
 
+
+
+function buildOneHandSwordGuard(shape, part, x, y) {
+  const span = clamp(Number(shape.width || 55) * 1.65, 64, 155);
+  const body = clamp(Number(shape.thickness || 28) * 0.9, 16, 48);
+  const depth = clamp(Number(shape.depth || shape.thickness || 22) * 0.75, 9, 36);
+
+  const outline = new THREE.Shape();
+  outline.moveTo(-body * 0.45, span * 0.5);
+  outline.quadraticCurveTo(0, span * 0.62, body * 0.45, span * 0.5);
+  outline.lineTo(body * 0.34, span * 0.13);
+  outline.quadraticCurveTo(body * 0.12, 0, body * 0.34, -span * 0.13);
+  outline.lineTo(body * 0.45, -span * 0.5);
+  outline.quadraticCurveTo(0, -span * 0.62, -body * 0.45, -span * 0.5);
+  outline.lineTo(-body * 0.34, -span * 0.13);
+  outline.quadraticCurveTo(-body * 0.12, 0, -body * 0.34, span * 0.13);
+  outline.closePath();
+
+  const geometry = new THREE.ExtrudeGeometry(outline, {
+    depth,
+    bevelEnabled: true,
+    bevelThickness: 2.2,
+    bevelSize: 2.2,
+    bevelSegments: 3,
+    curveSegments: 12
+  });
+  geometry.center();
+
+  const mesh = new THREE.Mesh(
+    geometry,
+    createAssemblyMaterial(shape, 1, false)
+  );
+  mesh.position.set(x, y, 0);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  applyUserTransformOnly(mesh, part.transform);
+  mesh.userData.partId = part.id || "guard";
+  return mesh;
+}
+
+function buildOneHandSwordGrip(shape, part, x, y, length) {
+  const radius = clamp(Number(shape.width || 22) * 0.42, 7, 18);
+  const geometry = new THREE.CylinderGeometry(
+    radius * 0.88,
+    radius,
+    length,
+    28,
+    8
+  );
+  geometry.rotateZ(Math.PI / 2);
+
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x4a241a,
+    roughness: 0.7,
+    metalness: 0.12
+  });
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(x, y, 0);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  applyUserTransformOnly(mesh, part.transform);
+  mesh.userData.partId = part.id || "grip";
+
+  // Decorative wrap rings make the grip visually read as a handle.
+  const group = new THREE.Group();
+  group.add(mesh);
+  const ringMaterial = new THREE.MeshStandardMaterial({
+    color: 0x24130f,
+    roughness: 0.62,
+    metalness: 0.18
+  });
+  const ringCount = 8;
+
+  for (let index = 0; index < ringCount; index += 1) {
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(radius * 1.02, 1.25, 8, 20),
+      ringMaterial
+    );
+    ring.rotation.y = Math.PI / 2;
+    ring.position.set(
+      x - length / 2 + ((index + 0.5) / ringCount) * length,
+      y,
+      0
+    );
+    group.add(ring);
+  }
+
+  group.userData.partId = part.id || "grip";
+  return group;
+}
+
+function buildOneHandSwordPommel(shape, part, x, y) {
+  const radius = clamp(Number(shape.width || 38) * 0.43, 9, 24);
+  const geometry = new THREE.SphereGeometry(radius, 28, 18);
+  geometry.scale(1.12, 0.92, 0.92);
+
+  const mesh = new THREE.Mesh(
+    geometry,
+    createAssemblyMaterial(shape, 3, false)
+  );
+  mesh.position.set(x, y, 0);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  applyUserTransformOnly(mesh, part.transform);
+  mesh.userData.partId = part.id || "pommel";
+  return mesh;
+}
+
+function buildSwordCollar(x, y, height, depth, shape) {
+  const geometry = new THREE.BoxGeometry(10, height, depth);
+  const mesh = new THREE.Mesh(
+    geometry,
+    createAssemblyMaterial(shape, 0, false)
+  );
+  mesh.position.set(x, y, 0);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData.partId = "blade-collar";
+  return mesh;
+}
+
+function applyUserTransformOnly(object, transform = {}) {
+  object.position.x += clamp(Number(transform.x) || 0, -500, 500) * 0.55;
+  object.position.y -= clamp(Number(transform.y) || 0, -260, 260) * 0.55;
+  object.rotation.z += THREE.MathUtils.degToRad(
+    -clamp(Number(transform.rotation) || 0, -360, 360)
+  );
+  object.scale.x *= clamp(Number(transform.scaleX) || 1, 0.1, 3);
+  object.scale.y *= clamp(Number(transform.scaleY) || 1, 0.1, 3);
+}
 
 function buildGuardPart(shape, part, index) {
   const width = clamp(Number(shape.width || 58) * 1.5, 48, 190);

@@ -1828,3 +1828,14 @@ input[type="range"]:active{
   font-size:7px;
   letter-spacing:.1em;
 }
+
+
+/* One-Hand Sword Generator */
+.weapon-3d-toolbar strong::after{
+  content:" SWORD-01";
+  color:#73e1a4;
+}
+
+.weapon-3d-panel{
+  border-color:#50637a;
+}

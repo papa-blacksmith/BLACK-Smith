@@ -730,6 +730,8 @@ function initializeWeapon3DPreview(){
           shape:normalizeShape(shape)
         };
       },
+      getParts:()=>partSystem.getAllParts(shape),
+      getWeaponType:()=>selectedType,
       onStatus:(message,kind)=>{
         const status=$("weapon3DStatus");
         if(status){
