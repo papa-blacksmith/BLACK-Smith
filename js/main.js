@@ -129,29 +129,67 @@ function renderWeaponParts(){
   const host=$("weaponPartList");
   if(!host)return;
 
-  const definitions=partSystem.getDefinitions(selectedType);
-  const active=partSystem.activePartId;
-  const activeIndex=Math.max(0,definitions.findIndex((part)=>part.id===active));
+  const parts=partSystem.getAllParts(shape);
+  const activeIndex=Math.max(0,parts.findIndex((part)=>part.id===partSystem.activePartId));
 
-  host.innerHTML=definitions.map((part,index)=>`
-    <button
-      type="button"
-      class="weapon-part-button ${part.id===active?"active":""}"
-      data-part-id="${part.id}"
-    >
-      <span class="part-icon">${part.icon}</span>
-      <span>
-        <b>${part.label}</b>
-        <small>${index+1}</small>
-      </span>
-    </button>
+  host.innerHTML=parts.map((part,index)=>`
+    <div class="weapon-part-row ${part.active?"active":""} ${part.locked?"locked":""}">
+      <button
+        type="button"
+        class="weapon-part-button ${part.active?"active":""}"
+        data-part-id="${part.id}"
+      >
+        <span class="part-icon">${part.icon}</span>
+        <span class="part-main-label">
+          <b>${part.label}</b>
+          <small>Layer ${index+1}</small>
+        </span>
+      </button>
+
+      <div class="part-row-actions">
+        <button
+          type="button"
+          class="part-mini-button ${part.visible?"on":"off"}"
+          data-part-visibility="${part.id}"
+          title="表示切替"
+        >${part.visible?"👁":"🚫"}</button>
+
+        <button
+          type="button"
+          class="part-mini-button ${part.locked?"locked":""}"
+          data-part-lock="${part.id}"
+          title="ロック切替"
+        >${part.locked?"🔒":"🔓"}</button>
+
+        <button
+          type="button"
+          class="part-mini-button"
+          data-part-move="${part.id}"
+          data-direction="-1"
+          title="前面へ"
+          ${index===0?"disabled":""}
+        >▲</button>
+
+        <button
+          type="button"
+          class="part-mini-button"
+          data-part-move="${part.id}"
+          data-direction="1"
+          title="背面へ"
+          ${index===parts.length-1?"disabled":""}
+        >▼</button>
+      </div>
+    </div>
   `).join("");
 
   const label=$("activePartLabel");
-  if(label)label.textContent=partSystem.getActiveDefinition()?.label||"パーツ";
+  if(label){
+    const active=parts.find((part)=>part.active);
+    label.textContent=`${active?.label||"パーツ"}${active?.locked?"（ロック中）":""}`;
+  }
 
   const count=$("partCountLabel");
-  if(count)count.textContent=`${activeIndex+1}/${definitions.length}`;
+  if(count)count.textContent=`${activeIndex+1}/${parts.length}`;
 }
 
 function renderTypes(){
@@ -249,7 +287,13 @@ function render(){
   $("forgeCounter").textContent=`${remaining()}/${maxForges()}`;
   $("heroWeapon").textContent=state.weapons[0]?.icon||"⚔️";
   renderTypes();renderWeaponParts();renderControls();renderBlueprints();renderInventory();
-  drawEditor($("weaponEditor"),shape,selectedPoint,`${TYPES[selectedType].name}・${partSystem.getActiveDefinition()?.label||""}`);
+  drawLayeredEditor(
+    $("weaponEditor"),
+    partSystem.getAllParts(shape),
+    partSystem.activePartId,
+    selectedPoint,
+    TYPES[selectedType].name
+  );
   editorCore?.setDocument({
     version:1,
     weaponType:selectedType,
@@ -343,9 +387,10 @@ function scheduleEditorFrame(){
 
   requestAnimationFrame(()=>{
     editorFramePending=false;
-    drawEditor(
+    drawLayeredEditor(
       $("weaponEditor"),
-      shape,
+      partSystem.getAllParts(shape),
+      partSystem.activePartId,
       selectedPoint,
       TYPES[selectedType].name
     );
@@ -366,6 +411,11 @@ function findInsertIndexByX(x){
 }
 
 function createPointAtLocal(local){
+  if(partSystem.isActivePartLocked()){
+    toast("このパーツはロックされています");
+    return false;
+  }
+
   if(shape.points.length>=12){
     toast("制御点は最大12点です");
     return false;
@@ -403,6 +453,11 @@ function createPointAtLocal(local){
 }
 
 function deleteSelectedPoint(){
+  if(partSystem.isActivePartLocked()){
+    toast("このパーツはロックされています");
+    return false;
+  }
+
   if(shape.points.length<=3){
     toast("制御点は最低3点必要です");
     return false;
@@ -513,6 +568,11 @@ function bindPointEditing(){
 function bindEditor(){
   const svg=$("weaponEditor");
   svg.addEventListener("pointerdown",e=>{
+    if(partSystem.isActivePartLocked()){
+      toast("このパーツはロックされています");
+      return;
+    }
+
     const h=e.target.closest("[data-handle]");
     const w=e.target.closest("[data-width-index]");
     const a=e.target.closest("[data-index]:not([data-handle]):not([data-width-index])");
@@ -576,6 +636,31 @@ document.addEventListener("click",e=>{
     pushHistory();
     shape=partSystem.switchPart(partButton.dataset.partId,shape);
     selectedPoint=0;
+    render();
+  }
+
+  const visibilityButton=e.target.closest("[data-part-visibility]");
+  if(visibilityButton){
+    pushHistory();
+    partSystem.toggleVisibility(visibilityButton.dataset.partVisibility,shape);
+    render();
+  }
+
+  const lockButton=e.target.closest("[data-part-lock]");
+  if(lockButton){
+    pushHistory();
+    partSystem.toggleLock(lockButton.dataset.partLock,shape);
+    render();
+  }
+
+  const moveButton=e.target.closest("[data-part-move]");
+  if(moveButton){
+    pushHistory();
+    partSystem.movePart(
+      moveButton.dataset.partMove,
+      Number(moveButton.dataset.direction),
+      shape
+    );
     render();
   }
 

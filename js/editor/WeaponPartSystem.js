@@ -120,6 +120,9 @@ export class WeaponPartSystem {
 
     this.byWeaponType.set(weaponType, {
       activePartId: definitions[0].id,
+      order: definitions.map((definition) => definition.id),
+      visibility: Object.fromEntries(definitions.map((definition) => [definition.id, true])),
+      locked: Object.fromEntries(definitions.map((definition) => [definition.id, false])),
       parts
     });
 
@@ -177,15 +180,18 @@ export class WeaponPartSystem {
     return {
       version: 1,
       activePartId: this.activePartId,
-      order: definitions.map((part) => part.id),
-      items: definitions.map((definition) => ({
-        id: definition.id,
-        label: definition.label,
-        icon: definition.icon,
-        shape: cloneShape(state.parts[definition.id]),
-        visible: true,
-        locked: false
-      }))
+      order: [...state.order],
+      items: state.order.map((partId) => {
+        const definition = definitions.find((item) => item.id === partId);
+        return {
+          id: partId,
+          label: definition?.label || partId,
+          icon: definition?.icon || "◆",
+          shape: cloneShape(state.parts[partId]),
+          visible: state.visibility[partId] !== false,
+          locked: state.locked[partId] === true
+        };
+      })
     };
   }
 
@@ -201,8 +207,16 @@ export class WeaponPartSystem {
           weaponType,
           partId: item.id
         });
+        state.visibility[item.id] = item.visible !== false;
+        state.locked[item.id] = item.locked === true;
       }
     });
+
+    if (Array.isArray(payload.order) && payload.order.length) {
+      const valid = payload.order.filter((id) => state.parts[id]);
+      const missing = Object.keys(state.parts).filter((id) => !valid.includes(id));
+      state.order = [...valid, ...missing];
+    }
 
     const validActive = payload.activePartId &&
       state.parts[payload.activePartId];
@@ -214,4 +228,72 @@ export class WeaponPartSystem {
     this.activeWeaponType = weaponType;
     this.activePartId = state.activePartId;
   }
+  getState(weaponType = this.activeWeaponType) {
+    return this.byWeaponType.get(weaponType);
+  }
+
+  getOrderedDefinitions(weaponType = this.activeWeaponType) {
+    const state = this.getState(weaponType);
+    const definitions = this.getDefinitions(weaponType);
+
+    return (state?.order || definitions.map((item) => item.id))
+      .map((id) => definitions.find((item) => item.id === id))
+      .filter(Boolean);
+  }
+
+  getAllParts(currentShape) {
+    this.saveCurrentShape(currentShape);
+    const state = this.getState();
+
+    return state.order.map((partId, layerIndex) => {
+      const definition = this.getDefinitions().find((item) => item.id === partId);
+      return {
+        id: partId,
+        label: definition?.label || partId,
+        icon: definition?.icon || "◆",
+        shape: cloneShape(state.parts[partId]),
+        visible: state.visibility[partId] !== false,
+        locked: state.locked[partId] === true,
+        active: partId === this.activePartId,
+        layerIndex
+      };
+    });
+  }
+
+  isActivePartLocked() {
+    const state = this.getState();
+    return state?.locked?.[this.activePartId] === true;
+  }
+
+  toggleVisibility(partId, currentShape) {
+    this.saveCurrentShape(currentShape);
+    const state = this.getState();
+    if (!state?.parts?.[partId]) return;
+    state.visibility[partId] = !(state.visibility[partId] !== false);
+  }
+
+  toggleLock(partId, currentShape) {
+    this.saveCurrentShape(currentShape);
+    const state = this.getState();
+    if (!state?.parts?.[partId]) return;
+    state.locked[partId] = !(state.locked[partId] === true);
+  }
+
+  movePart(partId, direction, currentShape) {
+    this.saveCurrentShape(currentShape);
+    const state = this.getState();
+    const index = state.order.indexOf(partId);
+    if (index < 0) return;
+
+    const nextIndex = Math.max(
+      0,
+      Math.min(state.order.length - 1, index + direction)
+    );
+
+    if (nextIndex === index) return;
+
+    const [item] = state.order.splice(index, 1);
+    state.order.splice(nextIndex, 0, item);
+  }
+
 }

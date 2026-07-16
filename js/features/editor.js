@@ -217,3 +217,60 @@ export function createShapePreview(shapeInput, typeName = "") {
       <path d="${path}" fill="url(#miniMetal)" stroke="#e6b85e" stroke-width="1.4"/>
     </svg>`;
 }
+
+
+export function drawLayeredEditor(
+  svg,
+  parts,
+  activePartId,
+  selectedIndex,
+  typeName = ""
+) {
+  if (!svg) return;
+
+  const active = parts.find((part) => part.id === activePartId);
+  if (!active) {
+    svg.innerHTML = "";
+    return;
+  }
+
+  // First render active part using existing renderer.
+  drawEditor(svg, active.shape, selectedIndex, `${typeName}・${active.label}`);
+
+  // Capture active editor groups, then prepend non-active visible parts as passive layers.
+  const passiveLayers = parts
+    .filter((part) => part.visible && part.id !== activePartId)
+    .map((part, index) => {
+      const temp = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      drawEditor(temp, part.shape, -1, part.label);
+
+      const weaponPath = temp.querySelector('path[fill^="url"], path[stroke="#f1d08a"]');
+      const overlayGroup = temp.querySelector(".weapon-type-overlay");
+
+      const opacity = 0.34 + Math.min(0.28, index * 0.05);
+      const transformY = (index - (parts.length - 1) / 2) * 4;
+
+      return `
+        <g
+          class="passive-part-layer"
+          data-passive-part="${part.id}"
+          opacity="${opacity}"
+          transform="translate(0 ${transformY})"
+          pointer-events="none"
+        >
+          ${weaponPath ? weaponPath.outerHTML : ""}
+          ${overlayGroup ? overlayGroup.outerHTML : ""}
+        </g>
+      `;
+    })
+    .join("");
+
+  const defs = svg.querySelector("defs");
+  if (defs) {
+    defs.insertAdjacentHTML("afterend", passiveLayers);
+  } else {
+    svg.insertAdjacentHTML("afterbegin", passiveLayers);
+  }
+
+  svg.dataset.activePart = activePartId;
+}

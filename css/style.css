@@ -533,3 +533,101 @@ input[type="range"]:active{
     grid-template-columns:repeat(2,minmax(0,1fr));
   }
 }
+
+
+/* Phase 2-2 Layered Parts */
+.weapon-part-list{
+  grid-template-columns:1fr;
+}
+
+.weapon-part-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+  align-items:center;
+  padding:5px;
+  border:1px solid #303949;
+  border-radius:12px;
+  background:#121821;
+}
+
+.weapon-part-row.active{
+  border-color:#b98d3d;
+  background:
+    radial-gradient(circle at 10% 50%,rgba(230,184,94,.15),transparent 55%),
+    #171a20;
+}
+
+.weapon-part-row.locked{
+  opacity:.72;
+}
+
+.weapon-part-row .weapon-part-button{
+  border:0;
+  min-height:48px;
+  padding:6px 8px;
+  background:transparent;
+}
+
+.weapon-part-row .weapon-part-button.active{
+  box-shadow:none;
+}
+
+.part-main-label{
+  min-width:0;
+}
+
+.part-row-actions{
+  display:grid;
+  grid-template-columns:repeat(4,30px);
+  gap:4px;
+}
+
+.part-mini-button{
+  min-width:30px;
+  width:30px;
+  height:30px;
+  padding:0;
+  border:1px solid #384352;
+  border-radius:8px;
+  background:#171d26;
+  color:#eef1f5;
+  font-size:12px;
+}
+
+.part-mini-button:hover:not(:disabled){
+  border-color:#d4aa56;
+  background:#242c38;
+}
+
+.part-mini-button:disabled{
+  opacity:.28;
+  cursor:not-allowed;
+}
+
+.part-mini-button.off{
+  opacity:.55;
+}
+
+.part-mini-button.locked{
+  border-color:#9d6f52;
+  background:#2b201a;
+}
+
+.passive-part-layer{
+  filter:grayscale(.18) brightness(.82);
+}
+
+@media(max-width:680px){
+  .weapon-part-row{
+    grid-template-columns:1fr;
+  }
+
+  .part-row-actions{
+    grid-template-columns:repeat(4,1fr);
+  }
+
+  .part-mini-button{
+    width:100%;
+  }
+}
