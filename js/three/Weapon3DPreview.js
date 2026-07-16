@@ -12,11 +12,13 @@ export class Weapon3DPreview {
     container,
     getShape,
     getActivePart,
+    getParts = null,
     onStatus = () => {}
   }) {
     this.container = container;
     this.getShape = getShape;
     this.getActivePart = getActivePart;
+    this.getParts = getParts;
     this.onStatus = onStatus;
 
     this.updateQueued = false;
@@ -167,54 +169,65 @@ export class Weapon3DPreview {
   }
 
   rebuild(force = false) {
-    const part = this.getActivePart?.();
-    const shape = part?.shape || this.getShape?.();
-    if (!shape) return;
+    const activePart = this.getActivePart?.();
+    const currentShape = activePart?.shape || this.getShape?.();
+    if (!currentShape) return;
 
-    const signature = JSON.stringify({
-      id: part?.id || "active",
-      points: shape.points,
-      width: shape.width,
-      thickness: shape.thickness,
-      tip: shape.tip,
-      asymmetric: shape.asymmetric,
-      edgeStyle: shape.edgeStyle,
-      serration: shape.serration,
-      color: shape.color,
-      glow: shape.glow
-    });
+    const sourceParts = this.getParts?.();
+    const parts = Array.isArray(sourceParts) && sourceParts.length
+      ? sourceParts.filter((part) => part.visible !== false && part.shape)
+      : [activePart || {
+          id: "blade",
+          label: "刀身",
+          shape: currentShape,
+          transform: {}
+        }];
+
+    const signature = JSON.stringify(
+      parts.map((part) => ({
+        id: part.id,
+        label: part.label,
+        shape: {
+          points: part.shape?.points,
+          width: part.shape?.width,
+          thickness: part.shape?.thickness,
+          tip: part.shape?.tip,
+          asymmetric: part.shape?.asymmetric,
+          edgeStyle: part.shape?.edgeStyle,
+          serration: part.shape?.serration,
+          color: part.shape?.color,
+          glow: part.shape?.glow
+        },
+        transform: part.transform,
+        visible: part.visible
+      }))
+    );
 
     if (!force && signature === this.lastSignature) return;
 
     try {
-      const sampled = sampleWeaponGeometry(
-        shape,
-        CAD_SAMPLE_COUNT
-      );
+      const nextAssembly = new THREE.Group();
+      nextAssembly.name = "WeaponAssembly";
 
-      const rawContour = sanitizeContour(sampled.contour);
-      if (rawContour.length < 3) {
-        throw new Error("輪郭頂点が不足しています");
+      let totalVertices = 0;
+      let repairedParts = 0;
+
+      parts.forEach((part, index) => {
+        const result = this.buildPartObject(part, index, parts.length);
+
+        if (!result?.object) return;
+
+        totalVertices += result.vertexCount || 0;
+        repairedParts += result.repaired ? 1 : 0;
+        nextAssembly.add(result.object);
+      });
+
+      if (!nextAssembly.children.length) {
+        throw new Error("3D化できるパーツがありません");
       }
-
-      const repaired = repairPolygon(rawContour);
-      const contour = simplifyContour(repaired);
-
-      if (contour.length < 3) {
-        throw new Error("輪郭の修復に失敗しました");
-      }
-
-      if (hasSelfIntersection(contour)) {
-        throw new Error("輪郭の自己交差を解消できません");
-      }
-
-      const newMesh = buildCADMesh(contour, shape);
-      newMesh.userData.partId = part?.id || "active";
-      newMesh.userData.partLabel =
-        part?.label || "選択中パーツ";
 
       const oldChildren = [...this.weaponRoot.children];
-      this.weaponRoot.add(newMesh);
+      this.weaponRoot.add(nextAssembly);
 
       oldChildren.forEach((object) => {
         this.weaponRoot.remove(object);
@@ -224,24 +237,83 @@ export class Weapon3DPreview {
       this.lastSignature = signature;
       this.centerWeapon();
 
-      const repairedCount = Math.max(
-        0,
-        rawContour.length - contour.length
-      );
-
       this.onStatus(
-        `CAD同期済み・${contour.length}頂点` +
-        (repairedCount ? `・整理${repairedCount}` : ""),
+        `組立同期済み・${parts.length}パーツ・${totalVertices}頂点` +
+        (repairedParts ? `・修復${repairedParts}` : ""),
         "ok"
       );
     } catch (error) {
-      console.warn("CADメッシュ同期を保留しました", error);
+      console.warn("Weapon Assembly同期を保留しました", error);
       this.onStatus(
-        `CAD同期保留：${error.message}`,
+        `組立同期保留：${error.message}`,
         "warning"
       );
-      // 前回の正常メッシュを維持する。
     }
+  }
+
+  buildPartObject(part, index, total) {
+    const id = String(part.id || "").toLowerCase();
+    const label = String(part.label || "");
+    const shape = part.shape || this.getShape?.();
+
+    if (!shape) return null;
+
+    if (isGripPart(id, label)) {
+      const object = buildGripPart(shape, part, index);
+      return {
+        object,
+        vertexCount: object.geometry?.attributes?.position?.count || 0,
+        repaired: false
+      };
+    }
+
+    if (isPommelPart(id, label)) {
+      const object = buildPommelPart(shape, part, index);
+      return {
+        object,
+        vertexCount: object.geometry?.attributes?.position?.count || 0,
+        repaired: false
+      };
+    }
+
+    if (isGuardPart(id, label)) {
+      const object = buildGuardPart(shape, part, index);
+      return {
+        object,
+        vertexCount: object.geometry?.attributes?.position?.count || 0,
+        repaired: false
+      };
+    }
+
+    const sampled = sampleWeaponGeometry(shape, CAD_SAMPLE_COUNT);
+    const rawContour = sanitizeContour(sampled.contour);
+
+    if (rawContour.length < 3) {
+      throw new Error(`${label || id}の輪郭頂点が不足`);
+    }
+
+    const repaired = repairPolygon(rawContour);
+    const contour = simplifyContour(repaired);
+
+    if (contour.length < 3) {
+      throw new Error(`${label || id}の輪郭修復に失敗`);
+    }
+
+    if (hasSelfIntersection(contour)) {
+      throw new Error(`${label || id}の自己交差を解消できません`);
+    }
+
+    const object = buildCADMesh(contour, shape);
+    applyPartAssemblyTransform(object, part, id, label, index, total);
+
+    object.userData.partId = part.id || `part-${index}`;
+    object.userData.partLabel = part.label || "パーツ";
+
+    return {
+      object,
+      vertexCount: object.geometry?.attributes?.position?.count || 0,
+      repaired: contour.length !== rawContour.length
+    };
   }
 
   centerWeapon() {
@@ -433,6 +505,203 @@ function buildCADMesh(contourInput, shape) {
   mesh.receiveShadow = true;
 
   return mesh;
+}
+
+
+function buildGuardPart(shape, part, index) {
+  const width = clamp(Number(shape.width || 58) * 1.5, 48, 190);
+  const height = clamp(Number(shape.thickness || 26) * 1.15, 16, 84);
+  const depth = clamp(Number(shape.depth || 22), 8, 54);
+
+  const geometry = new THREE.BoxGeometry(
+    width,
+    height,
+    depth,
+    6,
+    3,
+    3
+  );
+
+  const material = createAssemblyMaterial(shape, index, false);
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+
+  applyPartAssemblyTransform(
+    mesh,
+    part,
+    "guard",
+    part.label || "鍔",
+    index,
+    1
+  );
+
+  return mesh;
+}
+
+function buildGripPart(shape, part, index) {
+  const radius = clamp(Number(shape.width || 22) * 0.44, 6, 22);
+  const length = clamp(Number(shape.length || 120), 70, 220);
+
+  const geometry = new THREE.CylinderGeometry(
+    radius * 0.88,
+    radius,
+    length,
+    24,
+    5
+  );
+  geometry.rotateZ(Math.PI / 2);
+
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x4b241a,
+    roughness: 0.72,
+    metalness: 0.16
+  });
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+
+  applyPartAssemblyTransform(
+    mesh,
+    part,
+    "grip",
+    part.label || "柄",
+    index,
+    1
+  );
+
+  return mesh;
+}
+
+function buildPommelPart(shape, part, index) {
+  const radius = clamp(Number(shape.width || 36) * 0.5, 7, 30);
+  const geometry = new THREE.SphereGeometry(radius, 28, 18);
+  geometry.scale(1.05, 0.92, 0.92);
+
+  const material = createAssemblyMaterial(shape, index, false);
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+
+  applyPartAssemblyTransform(
+    mesh,
+    part,
+    "pommel",
+    part.label || "ポンメル",
+    index,
+    1
+  );
+
+  return mesh;
+}
+
+function createAssemblyMaterial(shape, index, blade) {
+  const materialName = String(shape.material || "");
+  let color = shape.color || "#cfd5df";
+
+  if (materialName.includes("金")) color = "#d3a63f";
+  if (materialName.includes("銀")) color = "#d7e2ed";
+  if (materialName.includes("黒")) color = "#4c5868";
+  if (materialName.includes("ミスリル")) color = "#87badf";
+  if (materialName.includes("オリハルコン")) color = "#7fbd84";
+
+  return new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color(color),
+    metalness: blade ? 0.93 : 0.82,
+    roughness: blade ? 0.2 : 0.3,
+    clearcoat: 0.48,
+    clearcoatRoughness: 0.17,
+    emissive: new THREE.Color(color),
+    emissiveIntensity: clamp(
+      Number(shape.glow || 0) / 180,
+      0,
+      0.55
+    ),
+    side: THREE.DoubleSide
+  });
+}
+
+function applyPartAssemblyTransform(
+  object,
+  part,
+  id,
+  label,
+  index,
+  total
+) {
+  const transform = part.transform || {};
+  const key = `${id} ${label}`.toLowerCase();
+
+  let baseX = 0;
+  let baseY = 0;
+  let baseZ = 0;
+
+  if (isGuardPart(id, label)) {
+    baseX = -165;
+  } else if (isGripPart(id, label)) {
+    baseX = -255;
+  } else if (isPommelPart(id, label)) {
+    baseX = -345;
+  } else if (
+    key.includes("head") ||
+    /ヘッド|打撃面/.test(label)
+  ) {
+    baseX = 135;
+  }
+
+  object.position.x += baseX + clamp(
+    Number(transform.x) || 0,
+    -500,
+    500
+  ) * 0.55;
+
+  object.position.y += baseY - clamp(
+    Number(transform.y) || 0,
+    -260,
+    260
+  ) * 0.55;
+
+  object.position.z += baseZ + index * 0.35;
+
+  object.rotation.z += THREE.MathUtils.degToRad(
+    -clamp(Number(transform.rotation) || 0, -360, 360)
+  );
+
+  object.scale.x *= clamp(
+    Number(transform.scaleX) || 1,
+    0.1,
+    3
+  );
+
+  object.scale.y *= clamp(
+    Number(transform.scaleY) || 1,
+    0.1,
+    3
+  );
+
+  object.userData.socket = transform.socket || "root";
+}
+
+function isGuardPart(id, label) {
+  return (
+    ["guard", "guards", "habaki"].some((key) => id.includes(key)) ||
+    /鍔|鎺|ガード/.test(label)
+  );
+}
+
+function isGripPart(id, label) {
+  return (
+    ["grip", "grips", "shaft", "handle"].some((key) => id.includes(key)) ||
+    /柄|グリップ|長柄|ハンドル/.test(label)
+  );
+}
+
+function isPommelPart(id, label) {
+  return (
+    ["pommel", "buttcap", "butt_cap", "endcap"].some((key) => id.includes(key)) ||
+    /ポンメル|柄頭|石突|柄尻/.test(label)
+  );
 }
 
 function sanitizeContour(points) {
