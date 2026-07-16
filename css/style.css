@@ -730,3 +730,25 @@ input[type="range"]:active{
   visibility:visible;
   opacity:1;
 }
+
+
+/* Guaranteed Display Fix */
+#weaponEditor{
+  display:block !important;
+  visibility:visible !important;
+  opacity:1 !important;
+}
+
+#weaponEditor > g,
+#weaponEditor path,
+#weaponEditor rect,
+#weaponEditor circle,
+#weaponEditor polygon,
+#weaponEditor line,
+#weaponEditor text{
+  visibility:visible;
+}
+
+.active-part-transform{
+  opacity:1 !important;
+}

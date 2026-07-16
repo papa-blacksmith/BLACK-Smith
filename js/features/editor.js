@@ -230,156 +230,74 @@ export function drawLayeredEditor(
 
   const safeParts = Array.isArray(parts) ? parts : [];
   const active =
-    safeParts.find((part) => part.id === activePartId) ||
-    safeParts.find((part) => part.active) ||
-    safeParts[0];
+    safeParts.find((part) => part?.id === activePartId) ||
+    safeParts.find((part) => part?.active) ||
+    safeParts.find((part) => part?.shape);
 
   if (!active?.shape) {
-    svg.innerHTML = "";
+    svg.innerHTML = `
+      <text x="500" y="170" text-anchor="middle" fill="#e6b85e" font-size="22">
+        パーツデータを読み込めません
+      </text>
+      <text x="500" y="205" text-anchor="middle" fill="#98a2b3" font-size="14">
+        表示リセットを押してください
+      </text>
+    `;
     return;
   }
 
-  try {
-    drawEditor(
-      svg,
-      active.shape,
-      selectedIndex,
-      `${typeName}・${active.label || ""}`
-    );
+  // 最優先：既存の確実に動く描画処理で選択中パーツを表示する。
+  drawEditor(
+    svg,
+    active.shape,
+    selectedIndex,
+    `${typeName}・${active.label || ""}`
+  );
 
-    const defs = svg.querySelector("defs");
-    const activeContent = [...svg.children].find(
-      (node) => node.tagName?.toLowerCase() === "g"
-    );
+  const transform = sanitizeDisplayTransform(active.transform);
+  const editableGroup = [...svg.children].find(
+    (node) => node.tagName?.toLowerCase() === "g"
+  );
 
-    if (!activeContent) {
-      svg.dataset.activePart = active.id;
-      return;
-    }
-
-    const activeTransform = normalizePartTransform(active.transform);
-
-    const wrapper = document.createElementNS(
-      "http://www.w3.org/2000/svg",
-      "g"
-    );
-    wrapper.setAttribute("class", "active-part-transform");
-    wrapper.setAttribute(
+  if (editableGroup) {
+    editableGroup.setAttribute(
       "transform",
-      partTransformToSvg(activeTransform)
-    );
-
-    activeContent.parentNode.insertBefore(wrapper, activeContent);
-    wrapper.appendChild(activeContent);
-
-    const passiveMarkup = safeParts
-      .filter(
-        (part) =>
-          part?.shape &&
-          part.visible !== false &&
-          part.id !== active.id
+      combineTransforms(
+        editableGroup.getAttribute("transform") || "",
+        transform
       )
-      .map((part, index) => {
-        const temp = document.createElementNS(
-          "http://www.w3.org/2000/svg",
-          "svg"
-        );
-
-        drawEditor(temp, part.shape, -1, part.label || "");
-
-        const tempContent = [...temp.children].find(
-          (node) => node.tagName?.toLowerCase() === "g"
-        );
-
-        if (!tempContent) return "";
-
-        const clone = tempContent.cloneNode(true);
-
-        clone
-          .querySelectorAll(
-            ".handle-line,.editor-hit-target,.handle,.width-handle,.anchor"
-          )
-          .forEach((node) => node.remove());
-
-        const transform = normalizePartTransform(part.transform);
-        const opacity = Math.min(0.58, 0.30 + index * 0.055);
-
-        return `
-          <g
-            class="passive-part-layer"
-            data-passive-part="${part.id}"
-            opacity="${opacity}"
-            transform="${partTransformToSvg(transform)}"
-            pointer-events="none"
-          >
-            ${clone.innerHTML}
-          </g>
-        `;
-      })
-      .join("");
-
-    if (passiveMarkup) {
-      if (defs) {
-        defs.insertAdjacentHTML("afterend", passiveMarkup);
-      } else {
-        svg.insertAdjacentHTML("afterbegin", passiveMarkup);
-      }
-    }
-
-    svg.dataset.activePart = active.id;
-  } catch (error) {
-    console.error("Layered editor rendering failed:", error);
-
-    // 最低限、選択中パーツだけは必ず表示する。
-    drawEditor(
-      svg,
-      active.shape,
-      selectedIndex,
-      `${typeName}・${active.label || ""}`
     );
-
-    svg.dataset.activePart = active.id;
+    editableGroup.classList.add("active-part-transform");
   }
+
+  svg.dataset.activePart = active.id || "";
 }
 
-function normalizePartTransform(transform = {}) {
+function sanitizeDisplayTransform(transform = {}) {
+  const clamp = (value, min, max, fallback) => {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return fallback;
+    return Math.min(max, Math.max(min, number));
+  };
+
   return {
-    x: clampTransformNumber(transform.x, -380, 380, 0),
-    y: clampTransformNumber(transform.y, -180, 180, 0),
-    rotation: clampTransformNumber(
-      transform.rotation,
-      -180,
-      180,
-      0
-    ),
-    scaleX: clampTransformNumber(
-      transform.scaleX,
-      0.15,
-      2.5,
-      1
-    ),
-    scaleY: clampTransformNumber(
-      transform.scaleY,
-      0.15,
-      2.5,
-      1
-    )
+    x: clamp(transform.x, -260, 260, 0),
+    y: clamp(transform.y, -120, 120, 0),
+    rotation: clamp(transform.rotation, -90, 90, 0),
+    scaleX: clamp(transform.scaleX, .35, 1.8, 1),
+    scaleY: clamp(transform.scaleY, .35, 1.8, 1)
   };
 }
 
-function clampTransformNumber(value, min, max, fallback) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return fallback;
-  return Math.min(max, Math.max(min, number));
-}
-
-function partTransformToSvg(transform) {
-  return [
+function combineTransforms(original, transform) {
+  const partTransform = [
     `translate(${transform.x} ${transform.y})`,
-    `translate(500 180)`,
+    "translate(500 180)",
     `rotate(${transform.rotation})`,
     `scale(${transform.scaleX} ${transform.scaleY})`,
-    `translate(-500 -180)`
+    "translate(-500 -180)"
   ].join(" ");
+
+  return `${partTransform} ${original}`.trim();
 }
 

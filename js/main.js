@@ -110,6 +110,8 @@ function bindCanvasControls(){
 
   reset?.addEventListener("click",()=>{
     editorCore?.camera.reset();
+    render();
+    requestAnimationFrame(()=>render());
   });
 
   svg?.addEventListener("pointerdown",(event)=>{
