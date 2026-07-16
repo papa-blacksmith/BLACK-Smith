@@ -7,6 +7,18 @@ import { EditorCore } from "./editor/EditorCore.js";
 import { WeaponPartSystem } from "./editor/WeaponPartSystem.js";
 import { Weapon3DPreview } from "./three/Weapon3DPreview.js";
 import {
+  EXPLORATION_DIFFICULTIES,
+  normalizeExplorationState,
+  startExploration,
+  updateExplorationCompletion,
+  receivePendingExplorationRewards,
+  cancelExploration,
+  getActiveDifficulty,
+  getExplorationRemainingMs,
+  formatExplorationTime,
+  summarizeRewards
+} from "./systems/ExplorationSystem.js";
+import {
   OreInventorySystem,
   ORE_DEFINITIONS,
   ORE_CATALOG,
@@ -32,6 +44,7 @@ let contextWorldPoint=null;
 let renameTargetPartId=null;
 let oreInventory=new OreInventorySystem(state.oreInventory);
 let weapon3DPreview=null;
+let explorationTimerId=null;
 let selectedForgeOres=Array(5).fill(null);
 let activeEditorTab="shape";
 let undoStack=[],redoStack=[];
@@ -709,11 +722,25 @@ function initializeWeapon3DPreview(){
     weapon3DPreview=new Weapon3DPreview({
       container,
       getShape:()=>normalizeShape(shape),
-      getParts:()=>partSystem.getAllParts(shape)
+      getActivePart:()=>{
+        const parts=partSystem.getAllParts(shape);
+        return parts.find((part)=>part.active)||{
+          id:partSystem.activePartId,
+          label:partSystem.getActiveDefinition()?.label||"選択中パーツ",
+          shape:normalizeShape(shape)
+        };
+      },
+      onStatus:(message,kind)=>{
+        const status=$("weapon3DStatus");
+        if(status){
+          status.textContent=message;
+          status.dataset.state=kind||"ok";
+        }
+      }
     });
 
     const status=$("weapon3DStatus");
-    if(status)status.textContent="リアルタイム同期";
+    if(status)status.textContent="同期準備完了";
 
     $("reset3DView")?.addEventListener("click",()=>{
       weapon3DPreview?.resetView();
@@ -733,6 +760,270 @@ function initializeWeapon3DPreview(){
 
 function updateWeapon3DPreview(){
   weapon3DPreview?.scheduleUpdate();
+}
+
+
+function formatExplorationDuration(milliseconds){
+  const seconds=Math.round(milliseconds/1000);
+
+  if(seconds<60)return `${seconds}秒`;
+  if(seconds%60===0)return `${seconds/60}分`;
+
+  return `${Math.floor(seconds/60)}分${seconds%60}秒`;
+}
+
+function renderExploration(){
+  const list=$("explorationDifficultyList");
+  const activePanel=$("activeExplorationPanel");
+  const historyHost=$("explorationHistory");
+  const headerStatus=$("explorationHeaderStatus");
+
+  if(!list||!activePanel)return;
+
+  normalizeExplorationState(state);
+  const completedNow=updateExplorationCompletion(state);
+
+  if(completedNow){
+    saveState(state);
+  }
+
+  const active=state.exploration.active;
+  const difficulty=getActiveDifficulty(state);
+  const pending=state.exploration.pendingRewards||[];
+
+  if(active){
+    const remaining=getExplorationRemainingMs(state);
+    const completed=active.completed===true;
+
+    if(headerStatus){
+      headerStatus.textContent=completed
+        ? `報酬 ${pending.length}個`
+        : formatExplorationTime(remaining);
+    }
+
+    const rewardSummary=summarizeRewards(
+      active.rewards||pending
+    );
+
+    activePanel.innerHTML=`
+      <div class="active-exploration-card ${completed?"completed":""}">
+        <div class="active-exploration-icon">
+          ${difficulty?.icon||"🧭"}
+        </div>
+
+        <div class="active-exploration-content">
+          <small>${completed?"EXPLORATION COMPLETE":"EXPLORING"}</small>
+          <strong>${difficulty?.name||"探索"}探索</strong>
+          <p>${completed
+            ? "探索が完了しました。報酬を鉱石倉庫へ収納できます。"
+            : difficulty?.description||"鉱脈を探索中です。"
+          }</p>
+
+          <div class="exploration-progress-track">
+            <span style="width:${completed
+              ? 100
+              : Math.max(
+                  0,
+                  Math.min(
+                    100,
+                    ((Date.now()-active.startedAt)/
+                      Math.max(1,active.endsAt-active.startedAt))*100
+                  )
+                )
+            }%"></span>
+          </div>
+
+          <div class="exploration-live-status">
+            <b>${completed
+              ? `報酬 ${pending.length}個`
+              : formatExplorationTime(remaining)
+            }</b>
+            <small>${completed
+              ? "倉庫満杯分は受け取り保留になります"
+              : new Date(active.endsAt).toLocaleTimeString(
+                  "ja-JP",
+                  {hour:"2-digit",minute:"2-digit",second:"2-digit"}
+                )+" 完了予定"
+            }</small>
+          </div>
+
+          ${completed&&rewardSummary.length
+            ? `<div class="exploration-reward-preview">
+                ${rewardSummary.slice(0,12).map(({ore,amount})=>`
+                  <span style="--ore-color:${ore.color}">
+                    ${ore.icon} ${ore.name} ×${amount}
+                  </span>
+                `).join("")}
+                ${rewardSummary.length>12
+                  ? `<span>ほか${rewardSummary.length-12}種類</span>`
+                  : ""
+                }
+              </div>`
+            : ""
+          }
+
+          <div class="exploration-active-actions">
+            ${completed
+              ? `<button type="button" class="primary" id="receiveExplorationRewards">
+                  報酬を受け取る
+                </button>`
+              : `<button type="button" class="secondary danger" id="cancelExploration">
+                  探索を中止
+                </button>`
+            }
+          </div>
+        </div>
+      </div>
+    `;
+  }else{
+    if(headerStatus)headerStatus.textContent="待機中";
+
+    activePanel.innerHTML=`
+      <div class="exploration-empty-state">
+        <span>🧭</span>
+        <strong>探索隊は待機中です</strong>
+        <p>難易度を選択して鉱脈探索を開始してください。</p>
+      </div>
+    `;
+  }
+
+  list.innerHTML=EXPLORATION_DIFFICULTIES.map((item,index)=>`
+    <article class="exploration-difficulty-card">
+      <div class="exploration-difficulty-icon">${item.icon}</div>
+      <div class="exploration-difficulty-main">
+        <div class="exploration-difficulty-heading">
+          <strong>${item.name}</strong>
+          <span>${formatExplorationDuration(item.durationMs)}</span>
+        </div>
+        <p>${item.description}</p>
+        <div class="exploration-difficulty-meta">
+          <span>報酬 ${item.rewardMin}～${item.rewardMax}個</span>
+          <span>${index>=3?"高レア期待":"鉱物採集"}</span>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="exploration-start-button"
+        data-start-exploration="${item.id}"
+        ${active?"disabled":""}
+      >探索開始</button>
+    </article>
+  `).join("");
+
+  if(historyHost){
+    const history=state.exploration.history||[];
+
+    historyHost.innerHTML=history.length
+      ? history.map((entry)=>{
+          const item=EXPLORATION_DIFFICULTIES.find(
+            (difficulty)=>difficulty.id===entry.difficultyId
+          );
+
+          return `
+            <div class="exploration-history-row">
+              <span>${item?.icon||"🧭"}</span>
+              <b>${item?.name||"探索"}</b>
+              <small>${entry.rewardCount}個獲得</small>
+              <time>${new Date(entry.completedAt).toLocaleString("ja-JP")}</time>
+            </div>
+          `;
+        }).join("")
+      : '<div class="exploration-history-empty">探索履歴はまだありません</div>';
+  }
+
+  bindExplorationButtons();
+  manageExplorationTimer();
+}
+
+function bindExplorationButtons(){
+  document.querySelectorAll("[data-start-exploration]").forEach((button)=>{
+    button.onclick=()=>{
+      const result=startExploration(
+        state,
+        button.dataset.startExploration
+      );
+
+      if(!result.success){
+        toast("現在進行中の探索があります");
+        return;
+      }
+
+      saveState(state);
+      renderExploration();
+      toast(`${result.difficulty.name}探索を開始しました`);
+    };
+  });
+
+  const receiveButton=$("receiveExplorationRewards");
+  if(receiveButton){
+    receiveButton.onclick=()=>{
+      const result=receivePendingExplorationRewards(
+        state,
+        oreInventory
+      );
+
+      state.oreInventory=oreInventory.toJSON();
+      saveState(state);
+      render();
+
+      if(result.received.length){
+        toast(`鉱物を${result.received.length}個受け取りました`);
+      }
+
+      if(result.remaining.length){
+        toast(
+          `倉庫満杯のため${result.remaining.length}個を保留中です`
+        );
+      }
+    };
+  }
+
+  const cancelButton=$("cancelExploration");
+  if(cancelButton){
+    cancelButton.onclick=()=>{
+      if(!confirm("探索を中止しますか？報酬は獲得できません。")){
+        return;
+      }
+
+      if(cancelExploration(state)){
+        saveState(state);
+        renderExploration();
+        toast("探索を中止しました");
+      }
+    };
+  }
+}
+
+function manageExplorationTimer(){
+  const active=state.exploration?.active;
+  const shouldRun=active&&!active.completed;
+
+  if(!shouldRun){
+    if(explorationTimerId){
+      clearInterval(explorationTimerId);
+      explorationTimerId=null;
+    }
+    return;
+  }
+
+  if(explorationTimerId)return;
+
+  explorationTimerId=setInterval(()=>{
+    const completed=updateExplorationCompletion(state);
+
+    if(completed){
+      saveState(state);
+      clearInterval(explorationTimerId);
+      explorationTimerId=null;
+      render();
+      toast("探索が完了しました！");
+      return;
+    }
+
+    if($("exploration")?.classList.contains("active")){
+      renderExploration();
+    }
+  },1000);
 }
 
 function renderTypes(){
@@ -830,7 +1121,7 @@ function render(){
   $("forgeRemaining").textContent=`${remaining()}/${maxForges()}`;
   $("forgeCounter").textContent=`${remaining()}/${maxForges()}`;
   $("heroWeapon").textContent=state.weapons[0]?.icon||"⚔️";
-  renderTypes();renderWeaponParts();renderPartTransformControls();renderControls();renderBlueprints();renderInventory();renderOreInventory();renderForgeOreSlots();renderOreGacha();updateWeapon3DPreview();
+  renderTypes();renderWeaponParts();renderPartTransformControls();renderControls();renderBlueprints();renderInventory();renderOreInventory();renderForgeOreSlots();renderOreGacha();renderExploration();updateWeapon3DPreview();
   drawEditor(
     $("weaponEditor"),
     normalizeShape(shape),

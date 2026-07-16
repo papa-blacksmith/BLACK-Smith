@@ -15,7 +15,7 @@
     <p class="sub">FORGE OF LEGENDS</p>
     <p class="slogan">魂を打て。<br>世界に一本だけの武器を。</p>
     <button class="primary" id="enterButton">鍛冶場へ入る</button>
-    <small class="version">Ver0.7 Phase 3-1 Module Fix</small>
+    <small class="version">Ver0.7 Phase 3-2 Exact 3D Sync</small>
   </section>
 
   <section id="home" class="screen">
@@ -29,6 +29,16 @@
     </div>
 
     <button class="primary" data-go="forge">自由鍛造</button>
+
+
+    <button class="card menu" data-go="exploration">
+      <span>🧭</span>
+      <span>
+        <b>探索</b>
+        <small>鉱脈を探索して鉱物を獲得</small>
+      </span>
+      <span>›</span>
+    </button>
 
     <button class="card menu" data-go="ores">
           <span>⛏️</span>
@@ -136,7 +146,7 @@
         <div class="weapon-3d-toolbar">
           <div>
             <small>PHASE 3-1</small>
-            <strong>リアルタイム3Dメッシュ</strong>
+            <strong>選択パーツ・完全同期3Dメッシュ</strong>
           </div>
           <div class="weapon-3d-actions">
             <span id="weapon3DStatus">同期中</span>
@@ -237,6 +247,39 @@
   </section>
 
 
+
+  <section id="exploration" class="screen">
+    <header class="topbar">
+      <div>
+        <small class="screen-kicker">ORE EXPEDITION</small>
+        <strong>探索</strong>
+      </div>
+      <span class="pill" id="explorationHeaderStatus">待機中</span>
+    </header>
+
+    <div class="exploration-hero">
+      <div class="exploration-hero-glow"></div>
+      <span>⛏️</span>
+      <div>
+        <small>EXPLORE THE UNKNOWN VEIN</small>
+        <strong>未知の鉱脈へ</strong>
+        <p>探索時間が長いほど、希少な鉱物を発見しやすくなります。</p>
+      </div>
+    </div>
+
+    <section id="activeExplorationPanel" class="active-exploration-panel"></section>
+
+    <div id="explorationDifficultyList" class="exploration-difficulty-list"></div>
+
+    <section class="exploration-history-panel">
+      <div class="exploration-section-title">
+        <strong>探索履歴</strong>
+        <small>最新20件</small>
+      </div>
+      <div id="explorationHistory"></div>
+    </section>
+  </section>
+
   <section id="ores" class="screen">
     <header class="topbar">
       <div>
@@ -303,6 +346,7 @@
   <nav class="nav" id="nav">
     <button data-go="home">ホーム</button>
     <button data-go="forge">自由鍛造</button>
+    <button data-go="exploration">探索</button>
     <button data-go="blueprints">設計図</button>
     <button data-go="inventory">保管庫</button>
     <button data-go="ores">鉱石</button>

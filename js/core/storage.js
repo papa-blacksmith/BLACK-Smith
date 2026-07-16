@@ -8,7 +8,12 @@ export const DEFAULT_STATE={
   oreInventory:Array(64).fill(null),
   oreDailyKey:"",
   oreDailyClaimed:false,
-  oreDailyResults:[]
+  oreDailyResults:[],
+  exploration:{
+    active:null,
+    pendingRewards:[],
+    history:[]
+  }
 };
 
 export function loadState(){
@@ -30,7 +35,30 @@ export function loadState(){
       oreDailyClaimed:parsed.oreDailyClaimed===true,
       oreDailyResults:Array.isArray(parsed.oreDailyResults)
         ? parsed.oreDailyResults.filter(Boolean).slice(0,5)
-        : []
+        : [],
+      exploration:
+        parsed.exploration &&
+        typeof parsed.exploration === "object"
+          ? {
+              active:
+                parsed.exploration.active &&
+                typeof parsed.exploration.active === "object"
+                  ? parsed.exploration.active
+                  : null,
+              pendingRewards:Array.isArray(
+                parsed.exploration.pendingRewards
+              )
+                ? parsed.exploration.pendingRewards.filter(Boolean)
+                : [],
+              history:Array.isArray(parsed.exploration.history)
+                ? parsed.exploration.history.slice(0,20)
+                : []
+            }
+          : {
+              active:null,
+              pendingRewards:[],
+              history:[]
+            }
     };
   }catch{
     return {
@@ -38,7 +66,12 @@ export function loadState(){
       weapons:[],
       blueprints:[],
       oreInventory:Array(64).fill(null),
-      oreDailyResults:[]
+      oreDailyResults:[],
+      exploration:{
+        active:null,
+        pendingRewards:[],
+        history:[]
+      }
     };
   }
 }

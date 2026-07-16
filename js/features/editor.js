@@ -21,6 +21,117 @@ function interpolateWidth(points,t){
   };
 }
 
+export function sampleWeaponGeometry(shapeInput, targetSamples = 300) {
+  const shape = normalizeShape(shapeInput);
+  const sx = 110, sy = 55, ux = 760, uy = 250;
+  const anchors = shape.points.map((p, index) => ({
+    index,
+    x: sx + p.x * ux,
+    y: sy + p.y * uy,
+    inX: sx + (p.x + p.inX) * ux,
+    inY: sy + (p.y + p.inY) * uy,
+    outX: sx + (p.x + p.outX) * ux,
+    outY: sy + (p.y + p.outY) * uy,
+    width: p.width,
+    upper: p.upper,
+    lower: p.lower
+  }));
+
+  const segmentCount = Math.max(1, anchors.length - 1);
+  const samplesPerSegment = Math.max(
+    24,
+    Math.min(72, Math.ceil(targetSamples / segmentCount))
+  );
+  const samples = [];
+  const sampleMeta = [];
+
+  for (let i = 0; i < anchors.length - 1; i += 1) {
+    const a = anchors[i], b = anchors[i + 1];
+    for (let s = 0; s < samplesPerSegment; s += 1) {
+      const t = s / samplesPerSegment;
+      samples.push(cubic(
+        { x: a.x, y: a.y },
+        { x: a.outX, y: a.outY },
+        { x: b.inX, y: b.inY },
+        { x: b.x, y: b.y },
+        t
+      ));
+      sampleMeta.push((i + t) / segmentCount);
+    }
+  }
+
+  samples.push({ x: anchors.at(-1).x, y: anchors.at(-1).y });
+  sampleMeta.push(1);
+
+  const base = 24 + shape.width * .72;
+  const top = [];
+  const bottom = [];
+
+  samples.forEach((p, i) => {
+    const before = samples[Math.max(0, i - 1)];
+    const after = samples[Math.min(samples.length - 1, i + 1)];
+    const dx = after.x - before.x;
+    const dy = after.y - before.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len;
+    const ny = dx / len;
+    const local = interpolateWidth(shape.points, sampleMeta[i]);
+    const taper = 1 - (i / Math.max(1, samples.length - 1))
+      * Math.min(.65, shape.tip / 140);
+
+    let upper = base * taper * .5 * local.width * local.upper;
+    let lower = base * taper * .5 * local.width * local.lower;
+
+    if (!shape.asymmetric) {
+      const average = (upper + lower) / 2;
+      upper = average;
+      lower = average;
+    }
+
+    if (shape.edgeStyle === "serrated" && i % 5 === 0) {
+      upper += shape.serration * .16;
+    }
+    if (shape.edgeStyle === "broken" && i % 11 === 0) {
+      upper *= .55;
+    }
+    if (shape.edgeStyle === "double") {
+      upper *= .88;
+      lower *= .88;
+    }
+
+    top.push({ x: p.x + nx * upper, y: p.y + ny * upper });
+    bottom.push({ x: p.x - nx * lower, y: p.y - ny * lower });
+  });
+
+  const last = samples.at(-1);
+  const previous = samples.at(-2) || last;
+  const tipDx = last.x - previous.x;
+  const tipDy = last.y - previous.y;
+  const tipLength = Math.hypot(tipDx, tipDy) || 1;
+  const tip = {
+    x: last.x + tipDx / tipLength * (22 + shape.tip * .65),
+    y: last.y + tipDy / tipLength * (22 + shape.tip * .65)
+  };
+
+  const contour = [
+    ...top,
+    tip,
+    ...[...bottom].reverse()
+  ];
+
+  return {
+    shape,
+    anchors,
+    samples,
+    sampleMeta,
+    top,
+    bottom,
+    tip,
+    contour,
+    samplesPerSegment
+  };
+}
+
 function ornamentMarkup(shape){
   const size=12+shape.ornamentSize*.25;
   if(shape.ornamentType==="gem"){
@@ -39,49 +150,10 @@ function ornamentMarkup(shape){
 }
 
 export function drawEditor(svg,shapeInput,selectedIndex=0,typeName=""){
-  const shape=normalizeShape(shapeInput);
-  const sx=110,sy=55,ux=760,uy=250;
-  const anchors=shape.points.map((p,index)=>({
-    index,x:sx+p.x*ux,y:sy+p.y*uy,
-    inX:sx+(p.x+p.inX)*ux,inY:sy+(p.y+p.inY)*uy,
-    outX:sx+(p.x+p.outX)*ux,outY:sy+(p.y+p.outY)*uy,
-    width:p.width,upper:p.upper,lower:p.lower
-  }));
-  const samples=[];
-  const sampleMeta=[];
-  for(let i=0;i<anchors.length-1;i++){
-    const a=anchors[i],b=anchors[i+1];
-    for(let s=0;s<24;s++){
-      const t=s/24;
-      samples.push(cubic({x:a.x,y:a.y},{x:a.outX,y:a.outY},{x:b.inX,y:b.inY},{x:b.x,y:b.y},t));
-      sampleMeta.push((i+t)/(anchors.length-1));
-    }
-  }
-  samples.push({x:anchors.at(-1).x,y:anchors.at(-1).y});
-  sampleMeta.push(1);
-
-  const base=24+shape.width*.72,top=[],bottom=[];
-  samples.forEach((p,i)=>{
-    const before=samples[Math.max(0,i-1)],after=samples[Math.min(samples.length-1,i+1)];
-    const dx=after.x-before.x,dy=after.y-before.y,len=Math.hypot(dx,dy)||1;
-    const nx=-dy/len,ny=dx/len;
-    const local=interpolateWidth(shape.points,sampleMeta[i]);
-    const taper=1-(i/Math.max(1,samples.length-1))*Math.min(.65,shape.tip/140);
-    let upper=base*taper*.5*local.width*local.upper;
-    let lower=base*taper*.5*local.width*local.lower;
-    if(!shape.asymmetric){const avg=(upper+lower)/2;upper=avg;lower=avg;}
-    if(shape.edgeStyle==="serrated" && i%5===0)upper+=shape.serration*.16;
-    if(shape.edgeStyle==="broken" && i%11===0)upper*=.55;
-    if(shape.edgeStyle==="double"){upper*=.88;lower*=.88;}
-    top.push({x:p.x+nx*upper,y:p.y+ny*upper});
-    bottom.push({x:p.x-nx*lower,y:p.y-ny*lower});
-  });
-
-  const last=samples.at(-1),prev=samples.at(-2)||last;
-  const dx=last.x-prev.x,dy=last.y-prev.y,len=Math.hypot(dx,dy)||1;
-  const tip={x:last.x+dx/len*(22+shape.tip*.65),y:last.y+dy/len*(22+shape.tip*.65)};
+  const geometry=sampleWeaponGeometry(shapeInput,96);
+  const {shape,anchors,samples,top,bottom,tip}=geometry;
   const path=[`M ${top[0].x} ${top[0].y}`,...top.slice(1).map(p=>`L ${p.x} ${p.y}`),
-    `L ${tip.x} ${tip.y}`,...bottom.reverse().map(p=>`L ${p.x} ${p.y}`),"Z"].join(" ");
+    `L ${tip.x} ${tip.y}`,...[...bottom].reverse().map(p=>`L ${p.x} ${p.y}`),"Z"].join(" ");
 
   const zoom=shape.zoom||1;
   const transform=`translate(${500*(1-zoom)} ${180*(1-zoom)}) scale(${zoom})`;
