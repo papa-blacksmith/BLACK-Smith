@@ -1,0 +1,21 @@
+{
+  "name": "蒼鉄の片手剣",
+  "shape": {
+    "lengthCm": 92,
+    "averageWidthCm": 5.2,
+    "thicknessCm": 0.9,
+    "curvature": 0.15,
+    "serration": 0.05,
+    "holeRatio": 0.0
+  },
+  "forgeOres": [
+    {
+      "id": "BMC-C002",
+      "name": "鉄"
+    },
+    {
+      "id": "BMC-U002",
+      "name": "銀"
+    }
+  ]
+}

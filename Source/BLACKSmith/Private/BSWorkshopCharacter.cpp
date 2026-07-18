@@ -1,0 +1,15 @@
+#include "BSWorkshopCharacter.h"
+#include "Camera/CameraComponent.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/SpringArmComponent.h"
+#include "InputActionValue.h"
+#include "BSWorkshopInteractable.h"
+ABSWorkshopCharacter::ABSWorkshopCharacter(){PrimaryActorTick.bCanEverTick=false;bUseControllerRotationYaw=false;GetCharacterMovement()->bOrientRotationToMovement=true;GetCharacterMovement()->RotationRate=FRotator(0,540,0);CameraBoom=CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));CameraBoom->SetupAttachment(RootComponent);CameraBoom->TargetArmLength=420;CameraBoom->bUsePawnControlRotation=true;FollowCamera=CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));FollowCamera->SetupAttachment(CameraBoom,USpringArmComponent::SocketName);}
+void ABSWorkshopCharacter::BeginPlay(){Super::BeginPlay();GetCharacterMovement()->MaxWalkSpeed=WalkSpeed;if(APlayerController* PC=Cast<APlayerController>(Controller)){if(auto* S=ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer())){if(DefaultMappingContext)S->AddMappingContext(DefaultMappingContext,0);}}}
+void ABSWorkshopCharacter::SetupPlayerInputComponent(UInputComponent* C){Super::SetupPlayerInputComponent(C);auto* E=CastChecked<UEnhancedInputComponent>(C);if(MoveAction)E->BindAction(MoveAction,ETriggerEvent::Triggered,this,&ABSWorkshopCharacter::Move);if(LookAction)E->BindAction(LookAction,ETriggerEvent::Triggered,this,&ABSWorkshopCharacter::Look);if(JumpAction){E->BindAction(JumpAction,ETriggerEvent::Started,this,&ACharacter::Jump);E->BindAction(JumpAction,ETriggerEvent::Completed,this,&ACharacter::StopJumping);}if(SprintAction){E->BindAction(SprintAction,ETriggerEvent::Started,this,&ABSWorkshopCharacter::StartSprint);E->BindAction(SprintAction,ETriggerEvent::Completed,this,&ABSWorkshopCharacter::StopSprint);}if(InteractAction)E->BindAction(InteractAction,ETriggerEvent::Started,this,&ABSWorkshopCharacter::Interact);}
+void ABSWorkshopCharacter::Move(const FInputActionValue& V){const FVector2D A=V.Get<FVector2D>();if(!Controller)return;const FRotator Y(0,Controller->GetControlRotation().Yaw,0);AddMovementInput(FRotationMatrix(Y).GetUnitAxis(EAxis::X),A.Y);AddMovementInput(FRotationMatrix(Y).GetUnitAxis(EAxis::Y),A.X);}
+void ABSWorkshopCharacter::Look(const FInputActionValue& V){const FVector2D A=V.Get<FVector2D>();AddControllerYawInput(A.X);AddControllerPitchInput(A.Y);}
+void ABSWorkshopCharacter::StartSprint(){GetCharacterMovement()->MaxWalkSpeed=SprintSpeed;} void ABSWorkshopCharacter::StopSprint(){GetCharacterMovement()->MaxWalkSpeed=WalkSpeed;}
+void ABSWorkshopCharacter::Interact(){const FVector S=FollowCamera->GetComponentLocation();const FVector E=S+FollowCamera->GetForwardVector()*450.f;FHitResult H;FCollisionQueryParams P(SCENE_QUERY_STAT(BSInteract),false,this);if(GetWorld()->LineTraceSingleByChannel(H,S,E,ECC_Visibility,P)&&H.GetActor()&&H.GetActor()->Implements<UBSWorkshopInteractable>())IBSWorkshopInteractable::Execute_Interact(H.GetActor(),this);}
