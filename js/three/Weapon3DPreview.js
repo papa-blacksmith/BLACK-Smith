@@ -44,7 +44,8 @@ export class Weapon3DPreview {
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: true,
-      powerPreference: "high-performance"
+      powerPreference: "high-performance",
+      preserveDrawingBuffer: true
     });
     this.renderer.setPixelRatio(
       Math.min(window.devicePixelRatio || 1, 2)
@@ -519,6 +520,36 @@ export class Weapon3DPreview {
     this.centerWeapon();
   }
 
+
+  setBackground(mode = "dark") {
+    const backgrounds = {
+      dark: 0x080d13,
+      forge: 0x1c0d07,
+      studio: 0x26313d,
+      void: 0x000000
+    };
+    this.scene.background = new THREE.Color(backgrounds[mode] ?? backgrounds.dark);
+  }
+
+  setLightPreset(mode = "forge") {
+    const values = {
+      forge: 1.15,
+      studio: 1.55,
+      moon: 0.72,
+      dramatic: 1.95
+    };
+    this.renderer.toneMappingExposure = values[mode] ?? 1.15;
+  }
+
+  capturePNG({ transparent = false } = {}) {
+    const previousBackground = this.scene.background;
+    if (transparent) this.scene.background = null;
+    this.renderer.render(this.scene, this.camera);
+    const dataUrl = this.renderer.domElement.toDataURL("image/png");
+    this.scene.background = previousBackground;
+    return dataUrl;
+  }
+
   animate() {
     if (this.disposed) return;
 
@@ -647,6 +678,7 @@ function buildCADMesh(contourInput, shape, materialProfile = null, partRole = "b
   );
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
+  ensureUv2(geometry);
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
 
@@ -893,6 +925,29 @@ function buildPommelPart(shape, part, index, materialProfile = null) {
 }
 
 
+
+const AO_TEXTURE = createAOTexture();
+
+function createAOTexture() {
+  const data = new Uint8Array([
+    205, 205, 205, 255,
+    238, 238, 238, 255,
+    238, 238, 238, 255,
+    205, 205, 205, 255
+  ]);
+  const texture = new THREE.DataTexture(data, 2, 2, THREE.RGBAFormat);
+  texture.needsUpdate = true;
+  texture.colorSpace = THREE.NoColorSpace;
+  return texture;
+}
+
+function ensureUv2(geometry) {
+  const uv = geometry.getAttribute("uv");
+  if (uv && !geometry.getAttribute("uv1")) {
+    geometry.setAttribute("uv1", uv.clone());
+  }
+}
+
 function createMaterialFromProfile(
   materialProfile,
   partRole,
@@ -929,6 +984,8 @@ function createMaterialFromProfile(
     iridescenceIOR: 1.45,
     iridescenceThicknessRange: [100, 520],
     reflectivity: 0.92,
+    aoMap: AO_TEXTURE,
+    aoMapIntensity: 0.78,
     side: THREE.DoubleSide
   });
 

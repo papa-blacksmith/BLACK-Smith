@@ -21,7 +21,9 @@ export class ForgeSystem {
     oreDefinitions = {},
     go,
     toast,
-    getElement = (id) => document.getElementById(id)
+    getElement = (id) => document.getElementById(id),
+    onForgeStep = () => {},
+    onForgeComplete = () => {}
   }) {
     this.types = types;
     this.rarities = rarities;
@@ -41,6 +43,8 @@ export class ForgeSystem {
     this.go = go;
     this.toast = toast;
     this.$ = getElement;
+    this.onForgeStep = onForgeStep;
+    this.onForgeComplete = onForgeComplete;
 
     this.context = null;
     this.step = 0;
@@ -176,6 +180,8 @@ export class ForgeSystem {
     this.renderProcess();
 
     try {
+      this.onForgeStep(this.step, this.context);
+
       this.quality = Math.min(
         100,
         this.quality + Math.floor(Math.random() * 8) + 4
@@ -267,6 +273,7 @@ export class ForgeSystem {
 
       this.completed = true;
       this.saveState();
+      this.onForgeComplete(weapon);
       this.showWeapon(weapon);
     } finally {
       this.advancing = false;

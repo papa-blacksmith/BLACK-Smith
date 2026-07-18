@@ -1903,3 +1903,170 @@ input[type="range"]:active{
   content:" MATERIAL";
   color:#74e1a5;
 }
+
+
+/* Ver0.12-0.16 Integrated 3D */
+.nav{
+  grid-template-columns:repeat(7,1fr) !important;
+}
+
+.forge-effect-canvas{
+  position:absolute;
+  inset:0;
+  z-index:4;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+}
+
+.inspect-layout{
+  display:grid;
+  grid-template-columns:minmax(0,1.5fr) minmax(280px,.7fr);
+  gap:12px;
+}
+
+.inspect-stage-card,
+.inspect-info-card,
+.workshop-3d-card{
+  border:1px solid #394657;
+  border-radius:16px;
+  background:#0d141d;
+  overflow:hidden;
+}
+
+.inspect-3d-viewport{
+  height:clamp(420px,58vw,650px);
+  background:radial-gradient(circle at 50% 45%,#253244,#070b10 70%);
+}
+
+.inspect-3d-viewport canvas,
+.workshop-3d-viewport canvas{
+  display:block;
+  width:100%;
+  height:100%;
+}
+
+.inspect-toolbar{
+  display:grid;
+  grid-template-columns:1fr 1fr auto;
+  gap:7px;
+  padding:10px;
+  border-top:1px solid #2e3a49;
+}
+
+.inspect-toolbar select{
+  min-height:38px;
+  background:#121a24;
+  color:#e8edf3;
+  border:1px solid #3a4657;
+  border-radius:9px;
+  padding:6px;
+}
+
+.inspect-info-card{
+  padding:16px;
+}
+
+.inspect-info-card>small,
+.photo-mode-panel>strong,
+.inspect-story small{
+  color:#69dfa1;
+  letter-spacing:.14em;
+  font-size:8px;
+}
+
+.inspect-info-card h2{
+  color:#efc66e;
+  margin:8px 0 14px;
+}
+
+.inspect-stat{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  padding:9px 0;
+  border-top:1px solid #293442;
+}
+
+.inspect-stat span{
+  color:#8f9cac;
+}
+
+.inspect-stat b{
+  max-width:62%;
+  text-align:right;
+  overflow-wrap:anywhere;
+}
+
+.inspect-story{
+  margin-top:12px;
+  padding:12px;
+  border:1px solid #344153;
+  border-radius:11px;
+  background:#101720;
+}
+
+.inspect-story p{
+  margin:7px 0 0;
+  color:#aab5c3;
+  line-height:1.7;
+  font-size:9px;
+}
+
+.photo-mode-panel{
+  display:grid;
+  gap:7px;
+  margin-top:16px;
+}
+
+.workshop-3d-viewport{
+  height:clamp(440px,62vw,720px);
+  background:#080c12;
+}
+
+.workshop-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px;
+  border-top:1px solid #303b49;
+}
+
+.workshop-toolbar span{
+  color:#9ba7b6;
+  font-size:9px;
+}
+
+.workshop-equipment-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  margin-top:12px;
+}
+
+.workshop-equipment-grid button{
+  min-height:48px;
+  border:1px solid #3a4657;
+  border-radius:11px;
+  background:#131a24;
+  color:#e6ebf1;
+}
+
+@media(max-width:760px){
+  .inspect-layout{
+    grid-template-columns:1fr;
+  }
+
+  .inspect-toolbar{
+    grid-template-columns:1fr;
+  }
+
+  .workshop-equipment-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .nav button{
+    font-size:6px;
+  }
+}

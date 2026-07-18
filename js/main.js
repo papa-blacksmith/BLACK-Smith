@@ -7,6 +7,8 @@ import { EditorCore } from "./editor/EditorCore.js";
 import { WeaponPartSystem } from "./editor/WeaponPartSystem.js";
 import { Weapon3DPreview } from "./three/Weapon3DPreview.js";
 import { createWeaponMaterialProfile } from "./systems/MaterialEngine.js";
+import { ForgeEffectEngine } from "./systems/ForgeEffectEngine.js";
+import { Workshop3D } from "./three/Workshop3D.js";
 import {
   EXPLORATION_DIFFICULTIES,
   normalizeExplorationState,
@@ -45,6 +47,10 @@ let contextWorldPoint=null;
 let renameTargetPartId=null;
 let oreInventory=new OreInventorySystem(state.oreInventory);
 let weapon3DPreview=null;
+let inspect3DPreview=null;
+let workshop3D=null;
+let forgeEffectEngine=null;
+let selectedInspectWeapon=null;
 let explorationTimerId=null;
 let selectedForgeOres=Array(5).fill(null);
 let activeEditorTab="shape";
@@ -1076,6 +1082,165 @@ function renderMaterialPreview(){
   `;
 }
 
+
+function initializeForgeEffects(){
+  const processView=$("processView");
+  if(!processView||forgeEffectEngine)return;
+  forgeEffectEngine=new ForgeEffectEngine(processView);
+}
+
+function initializeWorkshop3D(){
+  const container=$("workshop3DViewport");
+  if(!container||workshop3D)return;
+
+  workshop3D=new Workshop3D({
+    container,
+    onSelect:({id,label})=>{
+      const labelHost=$("workshopSelection");
+      if(labelHost)labelHost.textContent=`選択中：${label}`;
+
+      const destinations={
+        anvil:"forge",
+        forge:"process",
+        workbench:"forge",
+        storage:"inventory",
+        ores:"ores",
+        npc:"home"
+      };
+
+      const destination=destinations[id];
+      if(destination){
+        setTimeout(()=>go(destination),220);
+      }
+    }
+  });
+
+  $("resetWorkshopView")?.addEventListener("click",()=>{
+    workshop3D?.resetView();
+  });
+}
+
+function initializeInspect3D(){
+  const container=$("inspect3DViewport");
+  if(!container||inspect3DPreview)return;
+
+  inspect3DPreview=new Weapon3DPreview({
+    container,
+    getShape:()=>selectedInspectWeapon?.shape||normalizeShape(shape),
+    getActivePart:()=>({
+      id:"blade",
+      label:selectedInspectWeapon?.type||"武器",
+      shape:selectedInspectWeapon?.shape||normalizeShape(shape)
+    }),
+    getParts:()=>selectedInspectWeapon?.shape?.parts?.items||null,
+    getWeaponType:()=>selectedInspectWeapon?.shape?.weaponType||0,
+    getMaterialProfile:()=>selectedInspectWeapon?.materialProfile||
+      createWeaponMaterialProfile(selectedInspectWeapon?.forgeOres||[]),
+    onStatus:()=>{}
+  });
+}
+
+function openWeaponInspect(index){
+  const weapon=state.weapons[index];
+  if(!weapon)return;
+
+  selectedInspectWeapon=weapon;
+  go("inspect");
+  initializeInspect3D();
+  inspect3DPreview?.scheduleUpdate(true);
+  renderInspectWeapon();
+}
+
+function renderInspectWeapon(){
+  const weapon=selectedInspectWeapon;
+  if(!weapon)return;
+
+  $("inspectWeaponName").textContent=weapon.name;
+  $("inspectWeaponStats").innerHTML=`
+    <div class="inspect-stat"><span>レアリティ</span><b style="color:${weapon.color}">${weapon.rarity}</b></div>
+    <div class="inspect-stat"><span>攻撃力</span><b>${weapon.attack}</b></div>
+    <div class="inspect-stat"><span>品質</span><b>${weapon.quality}</b></div>
+    <div class="inspect-stat"><span>シリアルNo.</span><b>${weapon.id}</b></div>
+    <div class="inspect-stat"><span>使用鉱物</span><b>${weapon.forgeOres?.map((ore)=>ore.name).join(" / ")||"標準鋼"}</b></div>
+    <div class="inspect-stat"><span>特殊効果</span><b>${weapon.oreEffects?.activations?.length||0}件発動</b></div>
+    <div class="inspect-story">
+      <small>WEAPON STORY</small>
+      <p>${weapon.name}。${new Date(weapon.forgedAt).toLocaleDateString("ja-JP")}に鍛造された、形状ID ${weapon.shapeId} の一点物。</p>
+    </div>
+  `;
+}
+
+function downloadDataUrl(dataUrl,filename){
+  const anchor=document.createElement("a");
+  anchor.href=dataUrl;
+  anchor.download=filename;
+  anchor.click();
+}
+
+function createWeaponCardDataUrl(){
+  const weapon=selectedInspectWeapon;
+  const image=inspect3DPreview?.capturePNG();
+  if(!weapon||!image)return null;
+
+  const canvas=document.createElement("canvas");
+  canvas.width=1200;
+  canvas.height=630;
+  const context=canvas.getContext("2d");
+  const picture=new Image();
+
+  return new Promise((resolve)=>{
+    picture.onload=()=>{
+      const gradient=context.createLinearGradient(0,0,1200,630);
+      gradient.addColorStop(0,"#080d13");
+      gradient.addColorStop(1,"#24150b");
+      context.fillStyle=gradient;
+      context.fillRect(0,0,1200,630);
+      context.drawImage(picture,30,30,750,570);
+
+      context.fillStyle="#efc66e";
+      context.font="700 22px sans-serif";
+      context.fillText("BLACK SMITH",820,90);
+
+      context.fillStyle="#ffffff";
+      context.font="700 40px sans-serif";
+      wrapText(context,weapon.name,820,150,330,50);
+
+      context.fillStyle=weapon.color||"#ffffff";
+      context.font="700 24px sans-serif";
+      context.fillText(weapon.rarity,820,275);
+
+      context.fillStyle="#d7dee8";
+      context.font="20px sans-serif";
+      context.fillText(`攻撃力  ${weapon.attack}`,820,330);
+      context.fillText(`品質    ${weapon.quality}`,820,370);
+      context.fillText(`形状ID  ${weapon.shapeId}`,820,410);
+
+      context.fillStyle="#7e8a9a";
+      context.font="15px sans-serif";
+      context.fillText(`SERIAL ${weapon.id}`,820,540);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    picture.src=image;
+  });
+}
+
+function wrapText(context,text,x,y,maxWidth,lineHeight){
+  const chars=[...String(text)];
+  let line="";
+  let offset=0;
+  for(const char of chars){
+    const test=line+char;
+    if(context.measureText(test).width>maxWidth&&line){
+      context.fillText(line,x,y+offset);
+      line=char;
+      offset+=lineHeight;
+    }else{
+      line=test;
+    }
+  }
+  if(line)context.fillText(line,x,y+offset);
+}
+
 function renderTypes(){
   $("weaponTypes").innerHTML=TYPES.map((t,i)=>`<button class="type-button ${i===selectedType?"active":""}" data-type="${i}">${t.icon}<br><small>${t.name}</small></button>`).join("");
 }
@@ -1157,7 +1322,7 @@ function renderBlueprints(){
 }
 function renderInventory(){
   $("inventoryCount").textContent=state.weapons.length;
-  $("inventoryGrid").innerHTML=state.weapons.map((w,i)=>`<button class="weapon-card" data-weapon="${i}">
+  $("inventoryGrid").innerHTML=state.weapons.map((w,i)=>`<button class="weapon-card" data-inspect-weapon="${i}">
     <span class="badge" style="color:${w.color}">${w.rarity}</span>
     <div class="inventory-preview">${w.shape ? createExactShapePreview(w.shape,w.type,`${w.id||i}_${i}`) : `<div class="icon">${w.icon}</div>`}</div>
     <b>${w.name}</b>
@@ -1170,7 +1335,7 @@ function render(){
   $("forgeRemaining").textContent=`${remaining()}/${maxForges()}`;
   $("forgeCounter").textContent=`${remaining()}/${maxForges()}`;
   $("heroWeapon").textContent=state.weapons[0]?.icon||"⚔️";
-  renderTypes();renderWeaponParts();renderPartTransformControls();renderControls();renderBlueprints();renderInventory();renderOreInventory();renderForgeOreSlots();renderOreGacha();renderExploration();renderMaterialPreview();updateWeapon3DPreview();
+  renderTypes();renderWeaponParts();renderPartTransformControls();renderControls();renderBlueprints();renderInventory();renderOreInventory();renderForgeOreSlots();renderOreGacha();renderExploration();renderMaterialPreview();updateWeapon3DPreview();if($("workshop")?.classList.contains("active"))initializeWorkshop3D();if($("inspect")?.classList.contains("active")){initializeInspect3D();renderInspectWeapon();}
   drawEditor(
     $("weaponEditor"),
     normalizeShape(shape),
@@ -1222,7 +1387,12 @@ const forgeSystem = new ForgeSystem({
   oreDefinitions: ORE_DEFINITIONS,
   go,
   toast,
-  getElement: $
+  getElement: $,
+  onForgeStep:(step)=>forgeEffectEngine?.trigger(step),
+  onForgeComplete:(weapon)=>{
+    forgeEffectEngine?.trigger(5);
+    selectedInspectWeapon=weapon;
+  }
 });
 
 function addPoint(){if(shape.points.length>=12)return toast("最大12点です");pushHistory();const p=[...shape.points].sort((a,b)=>a.x-b.x);let idx=0,gap=-1;for(let i=0;i<p.length-1;i++){const g=p[i+1].x-p[i].x;if(g>gap){gap=g;idx=i}}const a=p[idx],b=p[idx+1];p.splice(idx+1,0,{x:(a.x+b.x)/2,y:(a.y+b.y)/2,inX:-.05,inY:0,outX:.05,outY:0,smooth:true});shape.points=p;selectedPoint=idx+1;render()}
@@ -1554,6 +1724,17 @@ document.addEventListener("click",e=>{
     render();
   }
 
+
+  const inspectButton=e.target.closest("[data-inspect-weapon]");
+  if(inspectButton){
+    openWeaponInspect(Number(inspectButton.dataset.inspectWeapon));
+  }
+
+  const workshopButton=e.target.closest("[data-workshop-go]");
+  if(workshopButton){
+    go(workshopButton.dataset.workshopGo);
+  }
+
   const b=e.target.closest("[data-load-blueprint]");if(b)loadBlueprint(Number(b.dataset.loadBlueprint));
   const w=e.target.closest("[data-weapon]");if(w)forgeSystem.showWeapon(state.weapons[Number(w.dataset.weapon)]);
   const tab=e.target.closest("[data-editor-tab]");if(tab){activeEditorTab=tab.dataset.editorTab;document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===tab));renderAdvancedPanel();}
@@ -1708,5 +1889,50 @@ $("partRenameModal")?.addEventListener("click",(event)=>{
   if(event.target===$("partRenameModal"))closePartRename();
 });
 
+
+$("inspectLight")?.addEventListener("change",(event)=>{
+  inspect3DPreview?.setLightPreset(event.target.value);
+});
+$("inspectBackground")?.addEventListener("change",(event)=>{
+  inspect3DPreview?.setBackground(event.target.value);
+});
+$("inspectReset")?.addEventListener("click",()=>{
+  inspect3DPreview?.resetView();
+});
+$("captureInspect")?.addEventListener("click",()=>{
+  const data=inspect3DPreview?.capturePNG();
+  if(data)downloadDataUrl(data,`${selectedInspectWeapon?.name||"weapon"}.png`);
+});
+$("captureTransparent")?.addEventListener("click",()=>{
+  const data=inspect3DPreview?.capturePNG({transparent:true});
+  if(data)downloadDataUrl(data,`${selectedInspectWeapon?.name||"weapon"}_transparent.png`);
+});
+$("generateWeaponCard")?.addEventListener("click",async()=>{
+  const data=await createWeaponCardDataUrl();
+  if(data)downloadDataUrl(data,`${selectedInspectWeapon?.name||"weapon"}_card.png`);
+});
+$("shareWeapon")?.addEventListener("click",async()=>{
+  const data=await createWeaponCardDataUrl();
+  if(!data)return;
+
+  try{
+    const blob=await (await fetch(data)).blob();
+    const file=new File([blob],"black-smith-weapon.png",{type:"image/png"});
+    if(navigator.share&&navigator.canShare?.({files:[file]})){
+      await navigator.share({
+        title:selectedInspectWeapon?.name||"BLACK Smith",
+        text:"BLACK Smithで鍛造した武器",
+        files:[file]
+      });
+    }else{
+      downloadDataUrl(data,`${selectedInspectWeapon?.name||"weapon"}_share.png`);
+      toast("共有用画像を保存しました");
+    }
+  }catch(error){
+    console.error(error);
+    toast("共有を完了できませんでした");
+  }
+});
+
 $("enterButton").onclick=enter;$("undoShape").onclick=undo;$("redoShape").onclick=redo;$("addPoint").onclick=addPoint;$("removePoint").onclick=removePoint;$("smoothPoint").onclick=smoothPoint;$("cornerPoint").onclick=cornerPoint;$("mirrorShape").onclick=mirror;$("duplicatePoint").onclick=duplicateSelectedPoint;$("resetShape").onclick=reset;$("saveBlueprint").onclick=()=>saveBlueprint();$("saveBlueprintFromForge").onclick=()=>saveBlueprint(`${TYPES[selectedType].name}設計図`);$("startForge").onclick=()=>forgeSystem.start();$("advanceForge").onclick=()=>forgeSystem.advance();
-bindEditor();bindPointEditing();initializeEditorCore();initializeWeapon3DPreview();bindCanvasControls();resetDaily();render();
+bindEditor();bindPointEditing();initializeEditorCore();initializeWeapon3DPreview();initializeForgeEffects();initializeWorkshop3D();bindCanvasControls();resetDaily();render();

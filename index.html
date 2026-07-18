@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#090a0e">
-  <title>BLACK Smith Ver0.6</title>
+  <title>BLACK Smith Ver0.16</title>
   <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
@@ -15,7 +15,7 @@
     <p class="sub">FORGE OF LEGENDS</p>
     <p class="slogan">魂を打て。<br>世界に一本だけの武器を。</p>
     <button class="primary" id="enterButton">鍛冶場へ入る</button>
-    <small class="version">Ver0.11 Material Engine</small>
+    <small class="version">Ver0.16 Workshop 3D Alpha</small>
   </section>
 
   <section id="home" class="screen">
@@ -47,6 +47,13 @@
         </button>
         <button class="card menu" data-go="blueprints">
       <span>📜</span><span><b>設計図</b><small>保存・読込・再利用</small></span><span>›</span>
+    </button>
+
+    
+    <button class="card menu" data-go="workshop">
+      <span>🏭</span>
+      <span><b>3D工房</b><small>設備を見渡し、選択する</small></span>
+      <span>›</span>
     </button>
 
     <button class="card menu" data-go="inventory">
@@ -346,9 +353,81 @@
     </details>
   </section>
 
+
+  <section id="inspect" class="screen">
+    <header class="topbar">
+      <strong>武器鑑賞</strong>
+      <button type="button" class="pill inspect-back" data-go="inventory">保管庫へ</button>
+    </header>
+
+    <div class="inspect-layout">
+      <section class="inspect-stage-card">
+        <div id="inspect3DViewport" class="inspect-3d-viewport">
+          <div class="weapon-3d-loading">武器を読み込んでいます…</div>
+        </div>
+        <div class="inspect-toolbar">
+          <select id="inspectLight">
+            <option value="forge">炉の光</option>
+            <option value="studio">スタジオ</option>
+            <option value="moon">月光</option>
+            <option value="dramatic">ドラマチック</option>
+          </select>
+          <select id="inspectBackground">
+            <option value="dark">暗い工房</option>
+            <option value="forge">炉前</option>
+            <option value="studio">撮影室</option>
+            <option value="void">漆黒</option>
+          </select>
+          <button type="button" class="secondary" id="inspectReset">表示リセット</button>
+        </div>
+      </section>
+
+      <section class="inspect-info-card">
+        <small>WEAPON INSPECT</small>
+        <h2 id="inspectWeaponName">武器未選択</h2>
+        <div id="inspectWeaponStats"></div>
+
+        <div class="photo-mode-panel">
+          <strong>PHOTO MODE</strong>
+          <button type="button" class="primary" id="captureInspect">スクショ撮影</button>
+          <button type="button" class="secondary" id="captureTransparent">背景透明PNG</button>
+          <button type="button" class="secondary" id="generateWeaponCard">武器カード生成</button>
+          <button type="button" class="secondary" id="shareWeapon">SNS共有</button>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <section id="workshop" class="screen">
+    <header class="topbar">
+      <strong>3D工房</strong>
+      <span class="pill">WORKSHOP ALPHA</span>
+    </header>
+
+    <div class="workshop-3d-card">
+      <div id="workshop3DViewport" class="workshop-3d-viewport">
+        <div class="weapon-3d-loading">工房を構築しています…</div>
+      </div>
+      <div class="workshop-toolbar">
+        <button type="button" class="secondary" id="resetWorkshopView">視点リセット</button>
+        <span id="workshopSelection">設備をクリックしてください</span>
+      </div>
+    </div>
+
+    <div class="workshop-equipment-grid">
+      <button data-workshop-go="forge">⚒️ 鍛冶台</button>
+      <button data-workshop-go="forge">🔨 金床</button>
+      <button data-workshop-go="process">🔥 溶鉱炉</button>
+      <button data-workshop-go="inventory">🗄️ 保管庫</button>
+      <button data-workshop-go="ores">💎 鉱石棚</button>
+      <button data-workshop-go="home">🧑 NPC</button>
+    </div>
+  </section>
+
   <nav class="nav" id="nav">
     <button data-go="home">ホーム</button>
     <button data-go="forge">自由鍛造</button>
+    <button data-go="workshop">3D工房</button>
     <button data-go="exploration">探索</button>
     <button data-go="blueprints">設計図</button>
     <button data-go="inventory">保管庫</button>
