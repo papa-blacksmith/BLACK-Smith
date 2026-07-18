@@ -6,6 +6,7 @@ import { ForgeSystem } from "./features/ForgeSystem.js";
 import { EditorCore } from "./editor/EditorCore.js";
 import { WeaponPartSystem } from "./editor/WeaponPartSystem.js";
 import { Weapon3DPreview } from "./three/Weapon3DPreview.js";
+import { createWeaponMaterialProfile } from "./systems/MaterialEngine.js";
 import {
   EXPLORATION_DIFFICULTIES,
   normalizeExplorationState,
@@ -732,6 +733,15 @@ function initializeWeapon3DPreview(){
       },
       getParts:()=>partSystem.getAllParts(shape),
       getWeaponType:()=>selectedType,
+      getMaterialProfile:()=>createWeaponMaterialProfile(
+        selectedForgeOres.map((oreId)=>{
+          const ore=ORE_DEFINITIONS[oreId];
+          return ore?{
+            name:ore.name,
+            rarity:ore.rarity
+          }:null;
+        }).filter(Boolean)
+      ),
       onStatus:(message,kind)=>{
         const status=$("weapon3DStatus");
         if(status){
@@ -1028,6 +1038,44 @@ function manageExplorationTimer(){
   },1000);
 }
 
+
+function renderMaterialPreview(){
+  const host=$("materialPreviewSummary");
+  if(!host)return;
+
+  const profile=createWeaponMaterialProfile(
+    selectedForgeOres.map((oreId)=>{
+      const ore=ORE_DEFINITIONS[oreId];
+      return ore?{
+        name:ore.name,
+        rarity:ore.rarity
+      }:null;
+    }).filter(Boolean)
+  );
+
+  const primary=profile.primary;
+  const secondary=profile.secondary;
+
+  host.innerHTML=`
+    <div class="material-preview-swatch">
+      <span style="
+        --primary:${primary.color};
+        --secondary:${secondary?.color||primary.edgeColor};
+        --glow:${primary.emissive};
+      "></span>
+    </div>
+    <div class="material-preview-info">
+      <small>MATERIAL ENGINE</small>
+      <strong>${profile.name}</strong>
+      <p>
+        金属度 ${Math.round(primary.metalness*100)}% /
+        粗さ ${Math.round(primary.roughness*100)}% /
+        発光 ${Math.round(primary.emissiveIntensity*100)}%
+      </p>
+    </div>
+  `;
+}
+
 function renderTypes(){
   $("weaponTypes").innerHTML=TYPES.map((t,i)=>`<button class="type-button ${i===selectedType?"active":""}" data-type="${i}">${t.icon}<br><small>${t.name}</small></button>`).join("");
 }
@@ -1122,7 +1170,7 @@ function render(){
   $("forgeRemaining").textContent=`${remaining()}/${maxForges()}`;
   $("forgeCounter").textContent=`${remaining()}/${maxForges()}`;
   $("heroWeapon").textContent=state.weapons[0]?.icon||"⚔️";
-  renderTypes();renderWeaponParts();renderPartTransformControls();renderControls();renderBlueprints();renderInventory();renderOreInventory();renderForgeOreSlots();renderOreGacha();renderExploration();updateWeapon3DPreview();
+  renderTypes();renderWeaponParts();renderPartTransformControls();renderControls();renderBlueprints();renderInventory();renderOreInventory();renderForgeOreSlots();renderOreGacha();renderExploration();renderMaterialPreview();updateWeapon3DPreview();
   drawEditor(
     $("weaponEditor"),
     normalizeShape(shape),
@@ -1621,6 +1669,8 @@ document.addEventListener("change",(event)=>{
 
   selectedForgeOres[index]=next;
   renderForgeOreSlots();
+  renderMaterialPreview();
+  updateWeapon3DPreview();
 });
 
 document.addEventListener("change",(event)=>{

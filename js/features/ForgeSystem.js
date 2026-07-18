@@ -1,3 +1,4 @@
+import { createWeaponMaterialProfile } from "../systems/MaterialEngine.js";
 import {
   evaluateForgeOreEffects,
   adjustWeaponRarities
@@ -223,6 +224,16 @@ export class ForgeSystem {
         attackAfterFlat *
         (1 + oreEffects.percentAttack / 100);
 
+      const materialProfile = createWeaponMaterialProfile(
+        this.context.forgeOres.map((oreId) => {
+          const ore = this.oreDefinitions[oreId];
+          return ore ? {
+            name: ore.name,
+            rarity: ore.rarity
+          } : null;
+        }).filter(Boolean)
+      );
+
       const weapon = {
         id: `${Date.now()}-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`,
         name:
@@ -236,6 +247,7 @@ export class ForgeSystem {
         attack: Math.round(finalAttack * 100) / 100,
         baseAttack: Math.round(baseAttack * 100) / 100,
         oreEffects,
+        materialProfile,
         forgeOres: this.context.forgeOres.map((oreId) => {
           const ore = this.oreDefinitions[oreId];
           return ore ? {

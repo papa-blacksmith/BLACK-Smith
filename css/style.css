@@ -1839,3 +1839,67 @@ input[type="range"]:active{
 .weapon-3d-panel{
   border-color:#50637a;
 }
+
+
+/* Ver0.11 Material Engine */
+.material-preview-summary{
+  display:grid;
+  grid-template-columns:58px minmax(0,1fr);
+  gap:10px;
+  align-items:center;
+  margin-top:10px;
+  padding:10px;
+  border:1px solid #374455;
+  border-radius:12px;
+  background:#0f151e;
+}
+
+.material-preview-swatch{
+  display:grid;
+  place-items:center;
+}
+
+.material-preview-swatch span{
+  width:48px;
+  height:48px;
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 30% 25%,#fff8,transparent 20%),
+    linear-gradient(135deg,var(--primary),var(--secondary));
+  box-shadow:
+    0 0 18px color-mix(in srgb,var(--glow) 65%,transparent),
+    inset -8px -8px 12px rgba(0,0,0,.28);
+}
+
+.material-preview-info{
+  min-width:0;
+}
+
+.material-preview-info small{
+  display:block;
+  color:#66dfa0;
+  font-size:7px;
+  letter-spacing:.14em;
+}
+
+.material-preview-info strong{
+  display:block;
+  margin-top:3px;
+  overflow:hidden;
+  color:#efc66e;
+  font-size:11px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.material-preview-info p{
+  margin:4px 0 0;
+  color:#8e9aaa;
+  font-size:8px;
+}
+
+.weapon-3d-toolbar strong::after{
+  content:" MATERIAL";
+  color:#74e1a5;
+}

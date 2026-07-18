@@ -2,6 +2,7 @@
 import * as THREE from "https://esm.sh/three@0.169.0";
 import { OrbitControls } from "https://esm.sh/three@0.169.0/examples/jsm/controls/OrbitControls.js";
 import { sampleWeaponGeometry } from "../features/editor.js";
+import { blendMaterialProfile } from "../systems/MaterialEngine.js";
 
 const CAD_SAMPLE_COUNT = 360;
 const MIN_POINT_DISTANCE = 0.45;
@@ -14,6 +15,7 @@ export class Weapon3DPreview {
     getActivePart,
     getParts = null,
     getWeaponType = () => 0,
+    getMaterialProfile = () => null,
     onStatus = () => {}
   }) {
     this.container = container;
@@ -21,6 +23,7 @@ export class Weapon3DPreview {
     this.getActivePart = getActivePart;
     this.getParts = getParts;
     this.getWeaponType = getWeaponType;
+    this.getMaterialProfile = getMaterialProfile;
     this.onStatus = onStatus;
 
     this.updateQueued = false;
@@ -189,6 +192,7 @@ export class Weapon3DPreview {
 
     const signature = JSON.stringify({
       weaponType,
+      materialProfile: this.getMaterialProfile?.(),
       parts: parts.map((part) => ({
         id: part.id,
         label: part.label,
@@ -211,9 +215,11 @@ export class Weapon3DPreview {
     if (!force && signature === this.lastSignature) return;
 
     try {
+      const materialProfile = this.getMaterialProfile?.();
+
       const generated = weaponType === 0
-        ? this.buildOneHandSword(parts)
-        : this.buildGenericWeapon(parts);
+        ? this.buildOneHandSword(parts, materialProfile)
+        : this.buildGenericWeapon(parts, materialProfile);
 
       const nextAssembly = generated.assembly;
       const totalVertices = generated.totalVertices;
@@ -249,7 +255,7 @@ export class Weapon3DPreview {
   }
 
 
-  buildGenericWeapon(parts) {
+  buildGenericWeapon(parts, materialProfile = null) {
     const assembly = new THREE.Group();
     assembly.name = "GenericWeaponAssembly";
 
@@ -257,7 +263,7 @@ export class Weapon3DPreview {
     let repairedParts = 0;
 
     parts.forEach((part, index) => {
-      const result = this.buildPartObject(part, index, parts.length);
+      const result = this.buildPartObject(part, index, parts.length, materialProfile);
       if (!result?.object) return;
 
       totalVertices += result.vertexCount || 0;
@@ -268,7 +274,7 @@ export class Weapon3DPreview {
     return { assembly, totalVertices, repairedParts };
   }
 
-  buildOneHandSword(parts) {
+  buildOneHandSword(parts, materialProfile = null) {
     const assembly = new THREE.Group();
     assembly.name = "OneHandSwordAssembly";
 
@@ -284,7 +290,7 @@ export class Weapon3DPreview {
       throw new Error("片手剣の刀身パーツがありません");
     }
 
-    const bladeResult = this.buildBladeForOneHandSword(bladePart);
+    const bladeResult = this.buildBladeForOneHandSword(bladePart, materialProfile);
     assembly.add(bladeResult.object);
 
     const bladeBox = new THREE.Box3().setFromObject(bladeResult.object);
@@ -317,7 +323,8 @@ export class Weapon3DPreview {
         guardPart.shape,
         guardPart,
         guardX,
-        bladeCenterY
+        bladeCenterY,
+        materialProfile
       );
       assembly.add(guard);
       totalVertices += guard.geometry?.attributes?.position?.count || 0;
@@ -336,7 +343,8 @@ export class Weapon3DPreview {
         gripPart,
         gripCenterX,
         bladeCenterY,
-        gripLength
+        gripLength,
+        materialProfile
       );
       assembly.add(grip);
       totalVertices += grip.geometry?.attributes?.position?.count || 0;
@@ -348,7 +356,8 @@ export class Weapon3DPreview {
         pommelPart.shape,
         pommelPart,
         pommelX,
-        bladeCenterY
+        bladeCenterY,
+        materialProfile
       );
       assembly.add(pommel);
       totalVertices += pommel.geometry?.attributes?.position?.count || 0;
@@ -360,7 +369,8 @@ export class Weapon3DPreview {
       bladeCenterY,
       clamp(bladeSize.y * 0.42, 11, 30),
       clamp(bladeSize.z * 1.15, 8, 30),
-      bladePart.shape
+      bladePart.shape,
+      materialProfile
     );
     assembly.add(collar);
     totalVertices += collar.geometry?.attributes?.position?.count || 0;
@@ -371,7 +381,7 @@ export class Weapon3DPreview {
     return { assembly, totalVertices, repairedParts };
   }
 
-  buildBladeForOneHandSword(part) {
+  buildBladeForOneHandSword(part, materialProfile = null) {
     const shape = part.shape;
     const sampled = sampleWeaponGeometry(shape, CAD_SAMPLE_COUNT);
     const rawContour = sanitizeContour(sampled.contour);
@@ -387,7 +397,7 @@ export class Weapon3DPreview {
       throw new Error("片手剣の刀身輪郭を修復できません");
     }
 
-    const object = buildCADMesh(contour, shape);
+    const object = buildCADMesh(contour, shape, materialProfile, "blade");
 
     // CAD mesh is centered. Move its left edge to the assembly ROOT.
     object.geometry.computeBoundingBox();
@@ -408,7 +418,7 @@ export class Weapon3DPreview {
     };
   }
 
-  buildPartObject(part, index, total) {
+  buildPartObject(part, index, total, materialProfile = null) {
     const id = String(part.id || "").toLowerCase();
     const label = String(part.label || "");
     const shape = part.shape || this.getShape?.();
@@ -416,7 +426,7 @@ export class Weapon3DPreview {
     if (!shape) return null;
 
     if (isGripPart(id, label)) {
-      const object = buildGripPart(shape, part, index);
+      const object = buildGripPart(shape, part, index, materialProfile);
       return {
         object,
         vertexCount: object.geometry?.attributes?.position?.count || 0,
@@ -425,7 +435,7 @@ export class Weapon3DPreview {
     }
 
     if (isPommelPart(id, label)) {
-      const object = buildPommelPart(shape, part, index);
+      const object = buildPommelPart(shape, part, index, materialProfile);
       return {
         object,
         vertexCount: object.geometry?.attributes?.position?.count || 0,
@@ -434,7 +444,7 @@ export class Weapon3DPreview {
     }
 
     if (isGuardPart(id, label)) {
-      const object = buildGuardPart(shape, part, index);
+      const object = buildGuardPart(shape, part, index, materialProfile);
       return {
         object,
         vertexCount: object.geometry?.attributes?.position?.count || 0,
@@ -460,7 +470,7 @@ export class Weapon3DPreview {
       throw new Error(`${label || id}の自己交差を解消できません`);
     }
 
-    const object = buildCADMesh(contour, shape);
+    const object = buildCADMesh(contour, shape, materialProfile, "blade");
     applyPartAssemblyTransform(object, part, id, label, index, total);
 
     object.userData.partId = part.id || `part-${index}`;
@@ -518,7 +528,7 @@ export class Weapon3DPreview {
   }
 }
 
-function buildCADMesh(contourInput, shape) {
+function buildCADMesh(contourInput, shape, materialProfile = null, partRole = "blade") {
   let contour = contourInput.map((point) => ({
     x: point.x,
     y: point.y
@@ -640,22 +650,11 @@ function buildCADMesh(contourInput, shape) {
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
 
-  const material = new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color(shape.color || "#cfd5df"),
-    metalness: 0.93,
-    roughness: 0.2,
-    clearcoat: 0.48,
-    clearcoatRoughness: 0.17,
-    emissive: new THREE.Color(
-      shape.color || "#ffffff"
-    ),
-    emissiveIntensity: clamp(
-      Number(shape.glow || 0) / 180,
-      0,
-      0.55
-    ),
-    side: THREE.DoubleSide
-  });
+  const material = createMaterialFromProfile(
+    materialProfile,
+    partRole,
+    shape
+  );
 
   const mesh = new THREE.Mesh(geometry, material);
   mesh.castShadow = true;
@@ -666,7 +665,7 @@ function buildCADMesh(contourInput, shape) {
 
 
 
-function buildOneHandSwordGuard(shape, part, x, y) {
+function buildOneHandSwordGuard(shape, part, x, y, materialProfile = null) {
   const span = clamp(Number(shape.width || 55) * 1.65, 64, 155);
   const body = clamp(Number(shape.thickness || 28) * 0.9, 16, 48);
   const depth = clamp(Number(shape.depth || shape.thickness || 22) * 0.75, 9, 36);
@@ -694,7 +693,7 @@ function buildOneHandSwordGuard(shape, part, x, y) {
 
   const mesh = new THREE.Mesh(
     geometry,
-    createAssemblyMaterial(shape, 1, false)
+    createMaterialFromProfile(materialProfile, "guard", shape)
   );
   mesh.position.set(x, y, 0);
   mesh.castShadow = true;
@@ -704,7 +703,7 @@ function buildOneHandSwordGuard(shape, part, x, y) {
   return mesh;
 }
 
-function buildOneHandSwordGrip(shape, part, x, y, length) {
+function buildOneHandSwordGrip(shape, part, x, y, length, materialProfile = null) {
   const radius = clamp(Number(shape.width || 22) * 0.42, 7, 18);
   const geometry = new THREE.CylinderGeometry(
     radius * 0.88,
@@ -715,10 +714,19 @@ function buildOneHandSwordGrip(shape, part, x, y, length) {
   );
   geometry.rotateZ(Math.PI / 2);
 
+  const gripProfile = blendMaterialProfile(
+    materialProfile,
+    "grip"
+  );
   const material = new THREE.MeshStandardMaterial({
-    color: 0x4a241a,
-    roughness: 0.7,
-    metalness: 0.12
+    color: new THREE.Color(gripProfile.color).lerp(
+      new THREE.Color("#351a14"),
+      0.68
+    ),
+    roughness: 0.68,
+    metalness: Math.min(0.28, gripProfile.metalness * 0.25),
+    emissive: new THREE.Color(gripProfile.emissive),
+    emissiveIntensity: gripProfile.emissiveIntensity * 0.18
   });
 
   const mesh = new THREE.Mesh(geometry, material);
@@ -756,14 +764,14 @@ function buildOneHandSwordGrip(shape, part, x, y, length) {
   return group;
 }
 
-function buildOneHandSwordPommel(shape, part, x, y) {
+function buildOneHandSwordPommel(shape, part, x, y, materialProfile = null) {
   const radius = clamp(Number(shape.width || 38) * 0.43, 9, 24);
   const geometry = new THREE.SphereGeometry(radius, 28, 18);
   geometry.scale(1.12, 0.92, 0.92);
 
   const mesh = new THREE.Mesh(
     geometry,
-    createAssemblyMaterial(shape, 3, false)
+    createMaterialFromProfile(materialProfile, "pommel", shape)
   );
   mesh.position.set(x, y, 0);
   mesh.castShadow = true;
@@ -773,11 +781,11 @@ function buildOneHandSwordPommel(shape, part, x, y) {
   return mesh;
 }
 
-function buildSwordCollar(x, y, height, depth, shape) {
+function buildSwordCollar(x, y, height, depth, shape, materialProfile = null) {
   const geometry = new THREE.BoxGeometry(10, height, depth);
   const mesh = new THREE.Mesh(
     geometry,
-    createAssemblyMaterial(shape, 0, false)
+    createMaterialFromProfile(materialProfile, "collar", shape)
   );
   mesh.position.set(x, y, 0);
   mesh.castShadow = true;
@@ -796,7 +804,7 @@ function applyUserTransformOnly(object, transform = {}) {
   object.scale.y *= clamp(Number(transform.scaleY) || 1, 0.1, 3);
 }
 
-function buildGuardPart(shape, part, index) {
+function buildGuardPart(shape, part, index, materialProfile = null) {
   const width = clamp(Number(shape.width || 58) * 1.5, 48, 190);
   const height = clamp(Number(shape.thickness || 26) * 1.15, 16, 84);
   const depth = clamp(Number(shape.depth || 22), 8, 54);
@@ -810,7 +818,7 @@ function buildGuardPart(shape, part, index) {
     3
   );
 
-  const material = createAssemblyMaterial(shape, index, false);
+  const material = createMaterialFromProfile(materialProfile, "guard", shape);
   const mesh = new THREE.Mesh(geometry, material);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
@@ -827,7 +835,7 @@ function buildGuardPart(shape, part, index) {
   return mesh;
 }
 
-function buildGripPart(shape, part, index) {
+function buildGripPart(shape, part, index, materialProfile = null) {
   const radius = clamp(Number(shape.width || 22) * 0.44, 6, 22);
   const length = clamp(Number(shape.length || 120), 70, 220);
 
@@ -862,12 +870,12 @@ function buildGripPart(shape, part, index) {
   return mesh;
 }
 
-function buildPommelPart(shape, part, index) {
+function buildPommelPart(shape, part, index, materialProfile = null) {
   const radius = clamp(Number(shape.width || 36) * 0.5, 7, 30);
   const geometry = new THREE.SphereGeometry(radius, 28, 18);
   geometry.scale(1.05, 0.92, 0.92);
 
-  const material = createAssemblyMaterial(shape, index, false);
+  const material = createMaterialFromProfile(materialProfile, "pommel", shape);
   const mesh = new THREE.Mesh(geometry, material);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
@@ -882,6 +890,55 @@ function buildPommelPart(shape, part, index) {
   );
 
   return mesh;
+}
+
+
+function createMaterialFromProfile(
+  materialProfile,
+  partRole,
+  shape = {}
+) {
+  const profile = blendMaterialProfile(
+    materialProfile,
+    partRole
+  );
+
+  const material = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color(profile.color),
+    metalness: clamp(profile.metalness, 0, 1),
+    roughness: clamp(profile.roughness, 0.02, 1),
+    clearcoat: clamp(profile.clearcoat, 0, 1),
+    clearcoatRoughness: clamp(
+      profile.clearcoatRoughness,
+      0.01,
+      1
+    ),
+    transmission: clamp(profile.transmission, 0, 0.9),
+    opacity: clamp(profile.opacity, 0.2, 1),
+    transparent:
+      profile.opacity < 1 ||
+      profile.transmission > 0,
+    emissive: new THREE.Color(profile.emissive),
+    emissiveIntensity: clamp(
+      profile.emissiveIntensity +
+      Number(shape.glow || 0) / 220,
+      0,
+      1.5
+    ),
+    iridescence: clamp(profile.iridescence, 0, 1),
+    iridescenceIOR: 1.45,
+    iridescenceThicknessRange: [100, 520],
+    reflectivity: 0.92,
+    side: THREE.DoubleSide
+  });
+
+  material.userData.materialProfile = {
+    id: profile.id,
+    name: profile.name,
+    partRole
+  };
+
+  return material;
 }
 
 function createAssemblyMaterial(shape, index, blade) {
